@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <item
+        android:id="@+id/settingsItem"
+        android:onClick="onClickMenu"
+        android:title="Settings" />
+
+    <item
+        android:id="@+id/helpItem"
+        android:onClick="onClickMenu"
+        android:title="Help" />
+
+    <item
+        android:id="@+id/playRandomFreqItem"
+        android:onClick="onClickMenu"
+        android:title="playRandomFreq" />
+    <item android:title="record quick"
+        android:id="@+id/recordQuickItem"
+        android:onClick="onClickMenu" />
+    <item android:title="experiment"
+        android:id="@+id/experimentItem"
+        android:onClick="onClickMenu" />
+</menu>
