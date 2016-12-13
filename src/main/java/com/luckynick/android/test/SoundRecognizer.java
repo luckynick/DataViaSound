@@ -406,8 +406,9 @@ public class SoundRecognizer {
     }
 
     /**
-     * Get array of samples
-     * @return
+     * Get samples from current record. MediaCodec and
+     * MediaExtractor classes are used.
+     * @return List of raw samples data
      * @throws IOException
      */
     public ArrayList<Short> getSamples() throws IOException
@@ -416,25 +417,25 @@ public class SoundRecognizer {
             return null;
         }
         ArrayList<Short> listOfShorts = new ArrayList<>();
-        MediaExtractor extractor = new MediaExtractor(); //MediaCodec can't really get audio file headers for processing
+        MediaExtractor extractor = new MediaExtractor(); //MediaCodec can't really get audio
+        // file headers for processing; MediaExtractor really has to do it
         extractor.setDataSource(recordPath);
         extractor.selectTrack(0); //we have only one track - our record
         MediaCodec.BufferInfo info = new MediaCodec.BufferInfo(); //Object is used because dequeueOutputBuffer(@NotNull BufferInfo),
         // audioData stored in object is not used
         MediaFormat format = extractor.getTrackFormat(0); //MediaExtractor recognizes audio file parameters
         String mime = format.getString(MediaFormat.KEY_MIME);
-        //System.out.println(format); //show parameters
         MediaCodec codec = MediaCodec.createDecoderByType(mime);
         codec.configure(format, null, null, 0);
         codec.start();
 
         do {
-            int inputBufferIndex = codec.dequeueInputBuffer(10000); //get index of next inputBuffer,
+            int inputBufferIndex = codec.dequeueInputBuffer(10000); //get index of next inputBuffer, timeout 10 sec
             if (inputBufferIndex >= 0) {
                 int sampleSize;
                 long presentationTime;
                 boolean sawInputEOS = false;
-                ByteBuffer inputBuffer = null; //obtain inputBuffer
+                ByteBuffer inputBuffer = null;
                 inputBuffer = codec.getInputBuffer(inputBufferIndex);
                 inputBuffer.clear();
                 if(inputBuffer != null)
@@ -454,7 +455,7 @@ public class SoundRecognizer {
                     continue;
                 }
                 codec.queueInputBuffer(inputBufferIndex, 0, sampleSize, presentationTime,
-                        sawInputEOS ? MediaCodec.BUFFER_FLAG_END_OF_STREAM : 0);//let codec know that inputBuffer is filled
+                        sawInputEOS ? MediaCodec.BUFFER_FLAG_END_OF_STREAM : 0);//let codec know that inputBuffer is ready to process
             }
             int outputBufferIndex;
             boolean repeat;
@@ -505,7 +506,10 @@ public class SoundRecognizer {
         return listOfShorts;
     }
 
-
+    /**
+     * Record new audiofile in path set in recordPath variable.
+     * Records till ifRecord is set to false from another threads.
+     */
     public void record()
     {
         if(ifRecord) return;
