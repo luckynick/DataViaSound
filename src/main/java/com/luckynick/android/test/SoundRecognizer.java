@@ -82,8 +82,7 @@ public class SoundRecognizer {
             }
         }
         setFreqMapping(freqArr);
-        if(samples != null) midShift = locateMidShift();
-        else midShift = 0; //-1 if error, 0 if not assigned
+        locateMidShift();
     }
 
     /**
@@ -255,7 +254,7 @@ public class SoundRecognizer {
      */
     public int closestBinding(double dval)
     {
-        double closestDist = 30000;
+        double closestDist = Double.MAX_VALUE;
         int closestFreq = -1;
         for(int ival : frequenciesBinding)
         {
@@ -275,14 +274,18 @@ public class SoundRecognizer {
      * Algorithm searches for second beep in START_TAG. This
      * beep must be high on contrast with first and third beep
      * in order for algorithm to work properly.
-     * @return offset in ms; position in middle of first beep
+     * Sets midShift to offset in ms; position in middle of first beep
      */
-    public int locateMidShift()
+    public void locateMidShift()
     {
-        if(samples == null || frequenciesBinding == null || audioData == null) return -1;
+        if(samples == null || frequenciesBinding == null || audioData == null) {
+            midShift = -1;
+            return;
+        }
         int recDuration = Integer.parseInt(audioData.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION));
         int tempDistance = 0, //length of theoretical first found beep
-                increment = BEEP_DURATION/10; //search for message start every BEEP_DURATION/10 ms from record start
+                increment = BEEP_DURATION/10; //search for beginning of the message every
+                                            // BEEP_DURATION/10 ms from record start
         int leftBorder = 0 /*left edge of found beep*/,
                 rightBorder = 0; //right edge of found beep
         for(int currMs = 10; currMs < recDuration; currMs += increment)
@@ -298,7 +301,7 @@ public class SoundRecognizer {
             }
 
             if(tempFreq == -1) continue;
-            if(tempFreq < frequenciesBinding[START_TAG.charAt(1)] - 2 * biggestDistBetweenFreq)
+            if(checkFreqProximity(currMs, START_TAG, 0.5))
             {
                 if(tempDistance < BEEP_DURATION/2)
                 {
@@ -306,7 +309,7 @@ public class SoundRecognizer {
                 }
                 else
                 {
-                    rightBorder = currMs;
+                    leftBorder = currMs;
                     break;
                 }
             }
@@ -314,8 +317,26 @@ public class SoundRecognizer {
                 tempDistance += increment;
             }
         }
-        leftBorder = rightBorder - tempDistance;
-        return leftBorder - BEEP_DURATION + (int)(BEEP_DURATION * 0.45); //0.5
+        midShift = leftBorder + (int)(BEEP_DURATION * 0.55); //0.5;
+        //value 0.55 found experimentally; TODO: check if really points on middle of first beep
+        Log.i(LOG_TAG, "midShift = " + midShift + ", leftBorder = " + leftBorder);
+        Log.i(LOG_TAG, "rightBorder = " + rightBorder + ", tempDistance = " + tempDistance);
+    }
+
+    public boolean checkFreqProximity(int offset, String characters, double precision){
+        int step = 0;
+        for(char c : characters.toCharArray()) {
+            if(!checkFreqProximity(getFrequency(samples, offset + step), c, precision)) return false;
+            step += BEEP_DURATION;
+        }
+        Log.i(LOG_TAG, "Freq proximity succeeded. offset = " + offset);
+        return true;
+    }
+
+    public boolean checkFreqProximity(double freq, char character, double precision){
+        // why minus below? because we find first minimum char of tag on contrast with maximum one
+        return freq < frequenciesBinding[character] + precision * biggestDistBetweenFreq
+                && freq > frequenciesBinding[character] - precision * biggestDistBetweenFreq;
     }
 
     /**
