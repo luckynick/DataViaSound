@@ -39,10 +39,10 @@ public class SoundGenerator{
      */
     public void playMessage(String m)
     {
-        Log.i(LOG_TAG, "new message played");
         String message = START_TAG;
         message += toHex(m);
         message += END_TAG + JUNK_RIGHT;
+        Log.i(LOG_TAG, "Playing new message: " + message);
         if(m.equals("")) return;
         int numSamples = SAMPLE_RATE * BEEP_DURATION / 1000;
         double[][] mSound = new double[message.length()][numSamples];
