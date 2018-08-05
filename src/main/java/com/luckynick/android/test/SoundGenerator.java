@@ -13,10 +13,9 @@ import static com.luckynick.android.test.ProjectTools.*;
 
 public class SoundGenerator{
 
-    /**
-     * Place where audiofile is stored.
+	/**
+     * Path where existing audio record is stored.
      */
-    private int numOfRandomBeeps = 10;
     private String recordPath;
     /**
      * Array of frequencies. Indexes of array represent decimal code of ASCII symbols.
@@ -106,7 +105,8 @@ public class SoundGenerator{
     }
 
     /**
-     * Play recorded audiofile.
+     * Play existing audio record. Used for playing previously recorder message from sender.
+     * For debug purpose.
      * @return false if there is no record
      */
     public boolean playMediaPlayer()
@@ -131,9 +131,5 @@ public class SoundGenerator{
         }
         mp.release();
         return true;
-    }
-
-    public int getNumOfRandomBeeps() {
-        return numOfRandomBeeps;
     }
 }

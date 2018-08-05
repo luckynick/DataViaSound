@@ -113,7 +113,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 break;
             case R.id.playRandomFreqItem:
                 String message = "";
-                for(int i = 0; i < sg.getNumOfRandomBeeps(); i++)
+                for(int i = 0; i < ProjectTools.NUM_OF_RANDOM_BEEPS; i++)
                 {
                     message += (char)(Math.random() * 128);
                 }

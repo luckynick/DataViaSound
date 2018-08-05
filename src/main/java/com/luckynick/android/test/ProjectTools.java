@@ -23,6 +23,11 @@ public class ProjectTools {
     public static final int BUFFER_SIZE_IN = AudioRecord.getMinBufferSize(SAMPLE_RATE,
             AudioFormat.CHANNEL_IN_MONO,
             AudioFormat.ENCODING_PCM_16BIT);
+    /**
+     * How many beeps to play when launching debug feature playRandomFreq.
+     * Without start and end tags.
+     */
+    public static final int NUM_OF_RANDOM_BEEPS = 10;
 
     /**
      * Enum to indicate side from wave

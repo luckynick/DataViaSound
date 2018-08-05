@@ -333,6 +333,14 @@ public class SoundRecognizer {
         return true;
     }
 
+    /**
+     *
+     * @param freq
+     * @param character
+     * @param precision define what is the maximum deriviation for given frequency still to be
+     *                  considered as given character; scale of biggestDistBetweenFreq
+     * @return
+     */
     public boolean checkFreqProximity(double freq, char character, double precision){
         // why minus below? because we find first minimum char of tag on contrast with maximum one
         return freq < frequenciesBinding[character] + precision * biggestDistBetweenFreq
