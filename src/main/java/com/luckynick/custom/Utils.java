@@ -1,14 +1,16 @@
-package com.luckynick.android.test;
+package com.luckynick.custom;
 
 
 import android.media.AudioFormat;
 import android.media.AudioRecord;
 import android.media.AudioTrack;
+import android.util.Log;
+
+import com.luckynick.shared.SharedUtils;
 
 import java.io.File;
 
-public class ProjectTools {
-    private ProjectTools() {};
+public class Utils extends SharedUtils {
 
     public static final char ERROR_CHAR = (char) 0; //
     public static final String START_TAG = "1E2" /*!z# - for non-hex version of program*/, //contrast required; middle char is max high
@@ -96,5 +98,11 @@ public class ProjectTools {
         }
         System.out.println(res);
         return res;
+    }
+
+
+
+    public static void Log(String tag, String consoleLog) {
+        if(SharedUtils.DEBUG_MODE) Log.i(tag, consoleLog);
     }
 }

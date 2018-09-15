@@ -4,12 +4,11 @@ import android.media.AudioFormat;
 import android.media.AudioManager;
 import android.media.AudioTrack;
 import android.media.MediaPlayer;
-import android.util.Log;
 
 import java.io.File;
 import java.io.IOException;
 
-import static com.luckynick.android.test.ProjectTools.*;
+import static com.luckynick.custom.Utils.*;
 
 public class SoundGenerator{
 
@@ -32,8 +31,8 @@ public class SoundGenerator{
     }
 
     /**
-     * Play message on loudspeakers. This method wraps message in tags,
-     * encodes text to frequencies and creates raw data.
+     * Play message on loudspeakers. This method wraps message in START_TAG and END_TAG,
+     * encodes text to frequencies and creates audio data, which is further played through speakers.
      * @param m text message which has to be encoded and played
      */
     public void playMessage(String m)
@@ -41,7 +40,7 @@ public class SoundGenerator{
         String message = START_TAG;
         message += toHex(m);
         message += END_TAG + JUNK_RIGHT;
-        Log.i(LOG_TAG, "Playing new message: " + message);
+        Log(LOG_TAG, "Playing new message: " + message);
         if(m.equals("")) return;
         int numSamples = SAMPLE_RATE * BEEP_DURATION / 1000;
         double[][] mSound = new double[message.length()][numSamples];
@@ -52,7 +51,7 @@ public class SoundGenerator{
             if(index >= frequenciesArr.length) currentFreq = frequenciesArr[ERROR_CHAR];
             else currentFreq = frequenciesArr[message.charAt(i)];
             if(currentFreq == -1.0) currentFreq = frequenciesArr[ERROR_CHAR];
-            Log.i(LOG_TAG, "Freq for symb '" + message.charAt(i) + "' num " + i + ": " + currentFreq);
+            Log(LOG_TAG, "Freq for symb '" + message.charAt(i) + "' num " + i + ": " + currentFreq);
             for (int j = 0; j < mSound[i].length; j++) {
                 mSound[i][j] = Math.sin(2.0 * Math.PI * j / (SAMPLE_RATE / currentFreq));
                 mBuffer[i][j] = (short) (mSound[i][j] * Short.MAX_VALUE);

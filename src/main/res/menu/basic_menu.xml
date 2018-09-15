@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<menu xmlns:android="http://schemas.android.com/apk/res/android">
+<menu xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:android="http://schemas.android.com/apk/res/android">
 
     <item
         android:id="@+id/settingsItem"
@@ -18,6 +19,17 @@
     <item android:title="record quick"
         android:id="@+id/recordQuickItem"
         android:onClick="onClickMenu" />
+
+    <item android:title="Join tests"
+        android:id="@+id/joinTestsItem"
+        android:onClick="onClickMenu" />
+    <item android:id="@+id/asHotspotCkeckbox"
+        android:titleCondensed="As HotSpot"
+        android:title="As HotSpot"
+        android:icon="@android:drawable/ic_menu_preferences"
+        android:onClick="onClickMenu"
+        android:checkable="true"/>
+
     <item android:title="experiment"
         android:id="@+id/experimentItem"
         android:onClick="onClickMenu" />

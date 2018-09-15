@@ -5,15 +5,14 @@ import android.media.MediaExtractor;
 import android.media.MediaFormat;
 import android.media.MediaMetadataRetriever;
 import android.media.MediaRecorder;
-import android.util.Log;
+
+import static com.luckynick.custom.Utils.*;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
-
-import static com.luckynick.android.test.ProjectTools.*;
 
 public class SoundRecognizer {
     private static final String LOG_TAG = "Recognizer";
@@ -77,7 +76,7 @@ public class SoundRecognizer {
             try {
                 samples = getSamples();
             } catch (IOException e) {
-                Log.e("IOException", "Problem getting samples");
+                Log("IOException", "Problem getting samples");
                 samples = null;
             }
         }
@@ -100,7 +99,7 @@ public class SoundRecognizer {
             if(tempLength > biggestLength) biggestLength = tempLength;
         }
         biggestDistBetweenFreq = biggestLength;
-        Log.i(LOG_TAG, "biggestDistBetweenFreq = " + biggestDistBetweenFreq);
+        Log(LOG_TAG, "biggestDistBetweenFreq = " + biggestDistBetweenFreq);
     }
 
     /**
@@ -111,7 +110,8 @@ public class SoundRecognizer {
     {
         if(samples == null || midShift <= 0)
         {
-            Log.e(LOG_TAG, "Samples: " + samples.isEmpty() + ", midShift: " + midShift);
+            Log(LOG_TAG, "Samples: " + samples.isEmpty() + ", midShift: " + midShift);
+
             return null;
         }
         return iterateForFrequencies(samples, midShift % 100); //rest is experimental
@@ -121,7 +121,7 @@ public class SoundRecognizer {
     {
         if(samples == null)
         {
-            Log.e(LOG_TAG, "Samples: " + samples.isEmpty());
+            Log(LOG_TAG, "Samples: " + samples.isEmpty());
             return null;
         }
         return iterateForFrequencies(samples, time);
@@ -157,7 +157,7 @@ public class SoundRecognizer {
             //System.out.println("'" + next + "' is: " + val);
             wholeStream += next;
         }
-        Log.i(LOG_TAG, "Offset is " + startT + "ms. Text: " + wholeStream);
+        Log(LOG_TAG, "Offset is " + startT + "ms. Text: " + wholeStream);
         String result = wholeStream.substring(wholeStream.indexOf(START_TAG) + START_TAG.length(), wholeStream.lastIndexOf(END_TAG));
 //        String result = wholeStream.substring(wholeStream.indexOf(START_TAG) + START_TAG.length(), wholeStream.length()).trim();
 
@@ -319,8 +319,8 @@ public class SoundRecognizer {
         }
         midShift = leftBorder + (int)(BEEP_DURATION * 0.55); //0.5;
         //value 0.55 found experimentally; TODO: check if really points on middle of first beep
-        Log.i(LOG_TAG, "midShift = " + midShift + ", leftBorder = " + leftBorder);
-        Log.i(LOG_TAG, "rightBorder = " + rightBorder + ", tempDistance = " + tempDistance);
+        Log(LOG_TAG, "midShift = " + midShift + ", leftBorder = " + leftBorder);
+        Log(LOG_TAG, "rightBorder = " + rightBorder + ", tempDistance = " + tempDistance);
     }
 
     public boolean checkFreqProximity(int offset, String characters, double precision){
@@ -329,7 +329,7 @@ public class SoundRecognizer {
             if(!checkFreqProximity(getFrequency(samples, offset + step), c, precision)) return false;
             step += BEEP_DURATION;
         }
-        Log.i(LOG_TAG, "Freq proximity succeeded. offset = " + offset);
+        Log(LOG_TAG, "Freq proximity succeeded. offset = " + offset);
         return true;
     }
 
@@ -480,7 +480,7 @@ public class SoundRecognizer {
                 }
                 else
                 {
-                    Log.e("InputBuffer", "is null");
+                    Log("InputBuffer", "is null");
                     continue;
                 }
                 codec.queueInputBuffer(inputBufferIndex, 0, sampleSize, presentationTime,
@@ -496,7 +496,7 @@ public class SoundRecognizer {
                 {
                     case MediaCodec.INFO_TRY_AGAIN_LATER:
                         //repeat = true;
-                        Log.i("MediaCodec", "Try again later");
+                        Log("MediaCodec", "Try again later");
                         try {
                             Thread.sleep(20);
                         } catch (InterruptedException e) {
@@ -505,11 +505,11 @@ public class SoundRecognizer {
                         break;
                     case MediaCodec.INFO_OUTPUT_FORMAT_CHANGED:
                         repeat = true;
-                        Log.i("MediaCodec", "Output format changed");
+                        Log("MediaCodec", "Output format changed");
                         break;
                     case MediaCodec.INFO_OUTPUT_BUFFERS_CHANGED:
                         repeat = true;
-                        Log.i("MediaCodec", "Output buffers changed");
+                        Log("MediaCodec", "Output buffers changed");
                         break;
                 }
             }

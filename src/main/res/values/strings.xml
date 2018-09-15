@@ -1,4 +1,5 @@
 <resources>
     <string name="app_name">DataViaSound</string>
     <string name="no_record">No record found</string>
+    <string name="title_activity_tests">TestsActivity</string>
 </resources>
