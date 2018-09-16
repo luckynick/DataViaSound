@@ -1,13 +1,14 @@
 package com.luckynick.shared.net;
 
+import com.luckynick.shared.SharedUtils;
+import com.luckynick.shared.enums.TestRole;
+
 import static com.luckynick.custom.Utils.*;
 
 import java.io.IOException;
-import java.net.DatagramPacket;
-import java.net.DatagramSocket;
-import java.net.InetAddress;
-import java.net.SocketException;
+import java.net.*;
 import java.util.ArrayList;
+import java.util.Enumeration;
 import java.util.List;
 
 public abstract class UDPServer extends Thread {
@@ -74,5 +75,62 @@ public abstract class UDPServer extends Thread {
 
     public void addMessageObserver(NetworkMessageObserver ob) {
         this.observers.add(ob);
+    }
+
+    public static Thread broadcastThread(final String message) {
+        return new Thread(new Runnable() {
+            @Override
+            public void run() {
+                do {
+                    try {
+                        broadcast(message);
+                        Thread.sleep(1000);
+                    }
+                    catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                    catch (InterruptedException e) {
+                        return;
+                    }
+                } while(true);
+            }
+        });
+    }
+
+
+    public static void broadcast(String broadcastMessage) throws IOException {
+        for(InetAddress a : listAllBroadcastAddresses()) {
+            Log(LOG_TAG, "Broadcasting on " + a.getHostAddress() + ":"
+                    + SharedUtils.UDP_COMMUNICATION_PORT + " message: " + broadcastMessage);
+            DatagramSocket socket = new DatagramSocket();
+            socket.setBroadcast(true);
+
+            byte[] buffer = broadcastMessage.getBytes();
+
+            DatagramPacket packet
+                    = new DatagramPacket(buffer, buffer.length, a, SharedUtils.UDP_COMMUNICATION_PORT);
+            socket.send(packet);
+            socket.close();
+        }
+
+    }
+
+    public static List<InetAddress> listAllBroadcastAddresses() throws SocketException {
+        List<InetAddress> broadcastList = new ArrayList<>();
+        Enumeration<NetworkInterface> interfaces
+                = NetworkInterface.getNetworkInterfaces();
+        while (interfaces.hasMoreElements()) {
+            NetworkInterface networkInterface = interfaces.nextElement();
+
+            if (networkInterface.isLoopback() || !networkInterface.isUp()) {
+                continue;
+            }
+
+            for(InterfaceAddress a : networkInterface.getInterfaceAddresses()) {
+                InetAddress add = a.getBroadcast();
+                if(add != null) broadcastList.add(add);
+            }
+        }
+        return broadcastList;
     }
 }

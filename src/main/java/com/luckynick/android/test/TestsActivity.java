@@ -9,25 +9,36 @@ import android.widget.TextView;
 import com.luckynick.android.test.net.AndroidNetworkService;
 import com.luckynick.android.test.net.AndroidUDPServer;
 import com.luckynick.custom.Device;
+import com.luckynick.shared.GSONCustomSerializer;
+import com.luckynick.shared.enums.PacketID;
 import com.luckynick.shared.net.NetworkMessageObserver;
 import com.luckynick.shared.PureFunctionalInterface;
 import com.luckynick.shared.SharedUtils;
-import com.luckynick.shared.net.TCPConnection;
 import com.luckynick.shared.enums.TestRole;
 
+import java.io.IOException;
 import java.net.InetAddress;
+
+import nl.pvdberg.pnet.client.Client;
+import nl.pvdberg.pnet.client.util.PlainClient;
+import nl.pvdberg.pnet.event.PNetListener;
+import nl.pvdberg.pnet.packet.Packet;
+import nl.pvdberg.pnet.packet.PacketBuilder;
+import nl.pvdberg.pnet.packet.PacketReader;
 
 import static com.luckynick.custom.Utils.*;
 
-public class TestsActivity extends BaseActivity implements NetworkMessageObserver {
+public class TestsActivity extends BaseActivity implements NetworkMessageObserver, PNetListener {
 
     public static final String LOG_TAG = "Tests";
 
-    private TCPConnection connectionToController;
-    private boolean controllerConnected = false;
+    //private TCPConnection connectionToController;
+    private volatile boolean controllerConnected = false;
 
     AndroidNetworkService network;
     AndroidUDPServer udpServer;
+
+    Client cli = new PlainClient();
 
     private TextView textStatus;
 
@@ -59,6 +70,7 @@ public class TestsActivity extends BaseActivity implements NetworkMessageObserve
 
     private void prepareForTests() {
         this.network = new AndroidNetworkService(getApplicationContext());
+        cli.setClientListener(this);
 
         if(getAsHotspot()) startHotspot();
         else persistConnectWifi();
@@ -80,7 +92,8 @@ public class TestsActivity extends BaseActivity implements NetworkMessageObserve
     private void stopTest() {
         udpServer.stopServer();
         network.turnWifiAp(false);
-        connectionToController.close();
+        cli.close();
+        //if(connectionToController != null) connectionToController.close();
         controllerConnected = false;
     }
 
@@ -92,27 +105,20 @@ public class TestsActivity extends BaseActivity implements NetworkMessageObserve
     @Override
     public void udpMessageReceived(InetAddress address, String received) {
         final String ip = address.getHostAddress();
-        Log(LOG_TAG, "Via UDP: "+ip + " " + received);
+        Log(LOG_TAG, "Via UDP from "+ ip + ":  " + received);
         if(controllerConnected) {
             Log(LOG_TAG, "Already connected.");
             return;
         }
         String params[] = received.split("\\s");
         final String role = params[0], port = params[1];
-        if(TestRole.CONTROLLER.toString().equals(role)) {
-            this.connectionToController = network.connect(ip, Integer.parseInt(port));
-            /*if(this.connectionToController != null) {
-                Log(LOG_TAG, "Fuck was connected:");
-                Log(LOG_TAG, ""+connectionToController.getSocket().isBound());
-                Log(LOG_TAG, ""+connectionToController.getSocket().isConnected());
-
-                controllerConnected = true;
-            }
-            else return;*/
+        if(TestRole.CONTROLLER.toString().equals(role) && !controllerConnected) {
+            cli.connect(ip, Integer.parseInt(port));
+            /*this.connectionToController = network.connect(ip, Integer.parseInt(port));
             this.connectionToController.send(Device.class, getFilledDevice());
             Log(LOG_TAG, "Connected to: " + ip + ':' + port);
             writeStatus("Connected to: " + ip + ':' + port);
-            controllerConnected = true;
+            controllerConnected = true;*/
         }
     }
 
@@ -131,6 +137,30 @@ public class TestsActivity extends BaseActivity implements NetworkMessageObserve
         if(getAsHotspot()) toFill.isHotspot = true;
 
         return toFill;
+    }
+
+    @Override
+    public void onConnect(Client c) {
+        controllerConnected = true;
+        Log(LOG_TAG, c.getInetAddress().getHostAddress() + ":" + c.getSocket().getPort() + " connected.");
+        c.send(new PacketBuilder(Packet.PacketType.Request).withID((short)PacketID.DEVICE.ordinal())
+                .withString(new GSONCustomSerializer<>(Device.class)
+                .serializeStr(getFilledDevice())).build());
+    }
+
+    @Override
+    public void onDisconnect(Client c) {
+        controllerConnected = false;
+        Log(LOG_TAG, "Disconnected.");
+
+    }
+
+    @Override
+    public void onReceive(Packet p, Client c) throws IOException {
+        Log(LOG_TAG, "Received "+p.toString());
+        PacketReader packetReader = new PacketReader(p);
+        String json = packetReader.readString();
+        Log(LOG_TAG, json);
     }
 
     protected class AsyncUDPWaiter extends AsyncTask<Void, Void, Void>

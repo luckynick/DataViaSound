@@ -63,28 +63,12 @@ public abstract class NetworkService {
     }
 
     public TCPConnection waitForConnection(final int port) throws ConnectException {
-        Thread broadcastThread = new Thread(new Runnable() {
-            @Override
-            public void run() {
-                do {
-                    try {
-                        broadcast(TestRole.CONTROLLER.toString() + ' ' + port);
-                        Thread.sleep(1000);
-                    }
-                    catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                    catch (InterruptedException e) {
-                        return;
-                    }
-                } while(true);
-            }
-        });
-        broadcastThread.start();
+        Thread bThr = UDPServer.broadcastThread(TestRole.CONTROLLER.toString() + ' ' + port);
+        bThr.start();
         try {
             ServerSocket ss = new ServerSocket(port);
             Socket s = ss.accept();
-            broadcastThread.interrupt();
+            bThr.interrupt();
             Log(LOG_TAG, "Received connection: " + s.getInetAddress().getHostAddress() + ':'
                     + s.getLocalPort());
             return new TCPConnection(s);
@@ -96,56 +80,4 @@ public abstract class NetworkService {
 
 
 
-    public static void broadcast(String broadcastMessage) throws IOException {
-        for(InetAddress a : listAllBroadcastAddresses()) {
-            Log(LOG_TAG, "Broadcasting on " + a.getHostAddress() + ":"
-                    + SharedUtils.UDP_COMMUNICATION_PORT + " message: " + broadcastMessage);
-            DatagramSocket socket = new DatagramSocket();
-            socket.setBroadcast(true);
-
-            byte[] buffer = broadcastMessage.getBytes();
-
-            DatagramPacket packet
-                    = new DatagramPacket(buffer, buffer.length, a, SharedUtils.UDP_COMMUNICATION_PORT);
-            socket.send(packet);
-            socket.close();
-        }
-
-    }
-
-    public static List<InetAddress> listAllBroadcastAddresses() throws SocketException {
-        List<InetAddress> broadcastList = new ArrayList<>();
-        Enumeration<NetworkInterface> interfaces
-                = NetworkInterface.getNetworkInterfaces();
-        while (interfaces.hasMoreElements()) {
-            NetworkInterface networkInterface = interfaces.nextElement();
-
-            if (networkInterface.isLoopback() || !networkInterface.isUp()) {
-                continue;
-            }
-
-            for(InterfaceAddress a : networkInterface.getInterfaceAddresses()) {
-                InetAddress add = a.getBroadcast();
-                if(add != null) broadcastList.add(add);
-            }
-        }
-        return broadcastList;
-    }
-
-    /*public static boolean isPortAvailable(String host, int port) {
-        // Assume port is available.
-        boolean result = true;
-
-        try {
-            (new Socket(host, port)).close();
-
-            // Successful connection means the port is taken.
-            result = false;
-        }
-        catch(SocketException e) {
-            // Could not connect.
-        }
-
-        return result;
-    }*/
 }
