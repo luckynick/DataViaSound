@@ -4,6 +4,7 @@ import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v7.widget.Toolbar;
 import android.view.Menu;
+import android.view.MenuItem;
 import android.widget.TextView;
 
 import com.luckynick.android.test.net.AndroidNetworkService;
@@ -11,7 +12,7 @@ import com.luckynick.android.test.net.AndroidUDPServer;
 import com.luckynick.custom.Device;
 import com.luckynick.shared.GSONCustomSerializer;
 import com.luckynick.shared.enums.PacketID;
-import com.luckynick.shared.net.NetworkMessageObserver;
+import com.luckynick.shared.net.UDPMessageObserver;
 import com.luckynick.shared.PureFunctionalInterface;
 import com.luckynick.shared.SharedUtils;
 import com.luckynick.shared.enums.TestRole;
@@ -28,7 +29,7 @@ import nl.pvdberg.pnet.packet.PacketReader;
 
 import static com.luckynick.custom.Utils.*;
 
-public class TestsActivity extends BaseActivity implements NetworkMessageObserver, PNetListener {
+public class TestsActivity extends BaseActivity implements UDPMessageObserver, PNetListener {
 
     public static final String LOG_TAG = "Tests";
 
@@ -52,7 +53,15 @@ public class TestsActivity extends BaseActivity implements NetworkMessageObserve
     @Override
     public void onPause() {
         super.onPause();
+        Log(LOG_TAG, "onPause event.");
         terminate();
+    }
+
+    @Override
+    public void onResume(){
+        super.onResume();
+
+        prepareForTests();
     }
 
     @Override
@@ -65,7 +74,7 @@ public class TestsActivity extends BaseActivity implements NetworkMessageObserve
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
-        prepareForTests();
+        //prepareForTests();
     }
 
     private void prepareForTests() {
@@ -75,7 +84,6 @@ public class TestsActivity extends BaseActivity implements NetworkMessageObserve
         if(getAsHotspot()) startHotspot();
         else persistConnectWifi();
 
-        udpServer = new AndroidUDPServer();
         new AsyncUDPWaiter().execute();
     }
 
@@ -90,8 +98,6 @@ public class TestsActivity extends BaseActivity implements NetworkMessageObserve
     }
 
     private void stopTest() {
-        udpServer.stopServer();
-        network.turnWifiAp(false);
         cli.close();
         //if(connectionToController != null) connectionToController.close();
         controllerConnected = false;
@@ -99,6 +105,8 @@ public class TestsActivity extends BaseActivity implements NetworkMessageObserve
 
     private void terminate() {
         Log(LOG_TAG, "Terminating...");
+        if(udpServer != null) udpServer.stopServer();
+        network.turnWifiAp(false);
         stopTest();
     }
 
@@ -133,8 +141,8 @@ public class TestsActivity extends BaseActivity implements NetworkMessageObserve
 
     public Device getFilledDevice() {
         Device toFill = new Device();
-        toFill.isHotspot = false;
-        if(getAsHotspot()) toFill.isHotspot = true;
+        toFill.isHotspot = getAsHotspot();
+
 
         return toFill;
     }
@@ -143,30 +151,36 @@ public class TestsActivity extends BaseActivity implements NetworkMessageObserve
     public void onConnect(Client c) {
         controllerConnected = true;
         Log(LOG_TAG, c.getInetAddress().getHostAddress() + ":" + c.getSocket().getPort() + " connected.");
-        c.send(new PacketBuilder(Packet.PacketType.Request).withID((short)PacketID.DEVICE.ordinal())
-                .withString(new GSONCustomSerializer<>(Device.class)
-                .serializeStr(getFilledDevice())).build());
     }
 
     @Override
     public void onDisconnect(Client c) {
-        controllerConnected = false;
         Log(LOG_TAG, "Disconnected.");
-
+        stopTest();
     }
 
     @Override
     public void onReceive(Packet p, Client c) throws IOException {
         Log(LOG_TAG, "Received "+p.toString());
         PacketReader packetReader = new PacketReader(p);
-        String json = packetReader.readString();
-        Log(LOG_TAG, json);
+
+        int id = packetReader.getPacketID();
+        if(id == PacketID.REQUEST.ordinal()){
+            int expectedResponse = packetReader.readInt();
+            if(expectedResponse == PacketID.DEVICE.ordinal()) {
+                c.send(new PacketBuilder(Packet.PacketType.Request).withID((short)PacketID.RESPONSE.ordinal())
+                        .withInt(PacketID.DEVICE.ordinal())
+                        .withString(new GSONCustomSerializer<>(Device.class)
+                                .serializeStr(getFilledDevice())).build());
+            }
+        }
     }
 
     protected class AsyncUDPWaiter extends AsyncTask<Void, Void, Void>
     {
         @Override
         protected Void doInBackground(Void... voids) {
+            udpServer = new AndroidUDPServer();
             udpServer.start();
             udpServer.addMessageObserver(TestsActivity.this);
             return null;

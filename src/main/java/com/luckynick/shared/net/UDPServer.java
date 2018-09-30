@@ -1,7 +1,6 @@
 package com.luckynick.shared.net;
 
 import com.luckynick.shared.SharedUtils;
-import com.luckynick.shared.enums.TestRole;
 
 import static com.luckynick.custom.Utils.*;
 
@@ -15,7 +14,7 @@ public abstract class UDPServer extends Thread {
 
     public static final String LOG_TAG = "UDPServer";
 
-    private List<NetworkMessageObserver> observers = new ArrayList<>();
+    private List<UDPMessageObserver> observers = new ArrayList<>();
 
     private DatagramSocket socket;
     private boolean running;
@@ -52,17 +51,9 @@ public abstract class UDPServer extends Thread {
             String received
                     = new String(packet.getData(), 0, packet.getLength());
 
-            //resolveReceive(packet.getAddress(), received);
-            for(NetworkMessageObserver o : this.observers) {
+            for(UDPMessageObserver o : this.observers) {
                 o.udpMessageReceived(packet.getAddress(), received.trim());
             }
-
-            /*try {
-                socket.send(packet);
-            }
-            catch (IOException e) {
-                e.printStackTrace();
-            }*/
         }
         socket.close();
     }
@@ -73,7 +64,7 @@ public abstract class UDPServer extends Thread {
         this.interrupt();
     }
 
-    public void addMessageObserver(NetworkMessageObserver ob) {
+    public void addMessageObserver(UDPMessageObserver ob) {
         this.observers.add(ob);
     }
 

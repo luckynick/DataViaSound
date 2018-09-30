@@ -163,6 +163,14 @@ public class AndroidNetworkService extends NetworkService {
         }
     }
 
+    /*public String getMac() {
+        return wifiManager.getConnectionInfo().getMacAddress();
+    }
+
+    public String getIP() {
+        return wifiManager.getConnectionInfo().get
+    }*/
+
 
     @Override
     public TCPConnection waitForConnection(int port) throws ConnectException {

@@ -64,6 +64,7 @@ public abstract class BaseActivity extends AppCompatActivity implements GetFrequ
     @Override
     public void onResume(){
         super.onResume();
+        Log(LOG_TAG, "onResume event.");
         if(menu == null) return;
         MenuItem hotspotCheck = menu.findItem(R.id.asHotspotCkeckbox);
         hotspotCheck.setChecked(this.isAsHotspot);

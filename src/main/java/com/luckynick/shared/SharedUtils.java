@@ -56,6 +56,10 @@ public class SharedUtils {
         public String getFullPath(String fileName) {
             return formPathString(this.toString(), fileName);
         }
+
+        public String getDirPath() {
+            return toString();
+        }
     }
 
     public static String formPathString(String ... elems) {
