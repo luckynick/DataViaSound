@@ -38,6 +38,7 @@ public class SharedUtils {
         SINGLE(formPathString(DataStorage.PROFILES.toString(), "single")),
         SEQUENTIAL(formPathString(DataStorage.PROFILES.toString(), "sequential")),
         SCENARIO(formPathString(DataStorage.PROFILES.toString(), "scenario")),
+        DICTIONARY(formPathString(DataStorage.MODELS.toString(), "dictionary")),
 
         RESULTS(formPathString(DataStorage.MODELS.toString(), "results")),
         ;

@@ -82,7 +82,7 @@ public class TestsActivity extends BaseActivity implements UDPMessageObserver, P
         cli.setClientListener(this);
 
         if(getAsHotspot()) startHotspot();
-        else persistConnectWifi();
+        else if(!network.isApOn()) persistConnectWifi();
 
         new AsyncUDPWaiter().execute();
     }
