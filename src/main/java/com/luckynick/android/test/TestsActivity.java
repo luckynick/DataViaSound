@@ -1,5 +1,6 @@
 package com.luckynick.android.test;
 
+import android.net.wifi.WifiManager;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v7.widget.Toolbar;
@@ -19,6 +20,7 @@ import com.luckynick.shared.enums.TestRole;
 
 import java.io.IOException;
 import java.net.InetAddress;
+import java.util.concurrent.ExecutionException;
 
 import nl.pvdberg.pnet.client.Client;
 import nl.pvdberg.pnet.client.util.PlainClient;
@@ -81,15 +83,30 @@ public class TestsActivity extends BaseActivity implements UDPMessageObserver, P
         this.network = new AndroidNetworkService(getApplicationContext());
         cli.setClientListener(this);
 
-        if(getAsHotspot()) startHotspot();
-        else if(!network.isApOn()) persistConnectWifi();
+        if(getAsHotspot()) {
+            startHotspot();
+            new AsyncUDPWaiter().execute(null, null);
+        }
+        else if(network.isApOn()) {
+            new AsyncUDPWaiter().execute(null, null);
+        }
+        else {
+            WifiManager.MulticastLock lock = persistConnectWifi();
+            new AsyncUDPWaiter().execute(lock);
+        }
 
-        new AsyncUDPWaiter().execute();
     }
 
-    private void persistConnectWifi() {
+    private WifiManager.MulticastLock persistConnectWifi() {
         this.textStatus.setText("Connecting to WiFi...");
-        new AsyncConnectWIFI().execute();
+        try {
+            return new AsyncConnectWIFI().execute().get();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        } catch (ExecutionException e) {
+            e.printStackTrace();
+        }
+        throw new IllegalStateException("MulticastLock has to be returned..");
     }
 
     private void startHotspot() {
@@ -176,35 +193,27 @@ public class TestsActivity extends BaseActivity implements UDPMessageObserver, P
         }
     }
 
-    protected class AsyncUDPWaiter extends AsyncTask<Void, Void, Void>
+    protected class AsyncUDPWaiter extends AsyncTask<WifiManager.MulticastLock, Void, Void>
     {
         @Override
-        protected Void doInBackground(Void... voids) {
-            udpServer = new AndroidUDPServer();
+        protected Void doInBackground(WifiManager.MulticastLock... params) {
+            udpServer = new AndroidUDPServer(params[0]);
             udpServer.start();
             udpServer.addMessageObserver(TestsActivity.this);
             return null;
         }
     }
 
-    protected class AsyncConnectWIFI extends AsyncTask<Void, Void, Void> implements PureFunctionalInterface
+    protected class AsyncConnectWIFI extends AsyncTask<Void, Void, WifiManager.MulticastLock> implements PureFunctionalInterface
     {
         private boolean connected = false;
         @Override
-        protected Void doInBackground(Void... voids) {
-            network.addWifiConnectedSub(this);
-            if(!network.isWifiConnected()) {
-                network.connectWiFi(SharedUtils.SSID, SharedUtils.PASSWORD);
-                while(!connected) {
-                    try {
-                        Thread.sleep(WAIT_TIME_AFTER_FAIL);
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
-                }
-            }
+        protected WifiManager.MulticastLock doInBackground(Void... voids) {
+            WifiManager.MulticastLock result = network.connectWiFi(SharedUtils.SSID, SharedUtils.PASSWORD);
+            //network.addWifiConnectedSub(this);
+
             writeStatus("Connected to SSID " + SharedUtils.SSID);
-            return null;
+            return result;
         }
 
         @Override

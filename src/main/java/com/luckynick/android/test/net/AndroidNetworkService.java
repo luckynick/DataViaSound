@@ -4,6 +4,7 @@ import android.content.Context;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.net.wifi.WifiConfiguration;
+import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.os.AsyncTask;
 import android.util.Log;
@@ -26,6 +27,7 @@ public class AndroidNetworkService extends NetworkService {
 
     WifiManager wifiManager;
     ConnectivityManager connManager;
+    //public static WifiManager.MulticastLock lock;
 
     private List<PureFunctionalInterface> wifiConnectedSubs = new ArrayList<>();
 
@@ -63,9 +65,15 @@ public class AndroidNetworkService extends NetworkService {
         return false;
     }*/
 
-    public boolean isWifiConnected() {
+    public boolean isWifiConnected(String ssid) {
         NetworkInfo i = connManager.getActiveNetworkInfo();
-        return i != null ? i.isConnectedOrConnecting() && (i.getType() == ConnectivityManager.TYPE_WIFI) : false;
+        WifiInfo wi = wifiManager.getConnectionInfo();
+        boolean connectedSomewhere = i != null ? i.isConnectedOrConnecting() && (i.getType() == ConnectivityManager.TYPE_WIFI) : false;
+        if(!connectedSomewhere) return false;
+        Log(LOG_TAG, "isWifiConnected: " + wi.getSSID() + "==" + "\""+ssid+"\"");
+        boolean connectedToSpecific =  ("\""+ssid+"\"").equals(wi.getSSID());
+        Log(LOG_TAG, "isWifiConnected: " + connectedToSpecific);
+        return connectedToSpecific;
     }
 
     public boolean isWifiEnabled() {
@@ -73,7 +81,7 @@ public class AndroidNetworkService extends NetworkService {
                 wifiManager.getWifiState() == WifiManager.WIFI_STATE_ENABLING;
     }
 
-    public void connectWiFi(String ssid, String password) {
+    public WifiManager.MulticastLock connectWiFi(String ssid, String password) {
         Log(LOG_TAG, "Connecting to SSID: " + ssid);
         if(isApOn()) turnWifiAp(false);
 
@@ -83,19 +91,20 @@ public class AndroidNetworkService extends NetworkService {
         //remember id
         int netId = wifiManager.addNetwork(wifiConfig);
         if(!isWifiEnabled()) wifiManager.setWifiEnabled(true);
-        if(!isWifiConnected()) {
+        if(!isWifiConnected(ssid)) {
             wifiManager.disconnect();
             wifiManager.enableNetwork(netId, true);
             wifiManager.reconnect();
         }
-        for(int i = 0; i < 5 && !isWifiConnected(); i++) {
+        for(int i = 0; !isWifiConnected(ssid); i++) {
             try {
                 Thread.sleep(WAIT_TIME_AFTER_FAIL);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
         }
-        if(isWifiConnected()) this.wifiConnectedEvent();
+        return wifiManager.createMulticastLock("Multitask lock");
+        //this.wifiConnectedEvent();
     }
 
     private boolean createNewNetwork(String ssid, String password) {

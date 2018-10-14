@@ -6,6 +6,7 @@ import java.io.File;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 public class SharedUtils {
@@ -98,5 +99,15 @@ public class SharedUtils {
 
     protected static void Log(String tag, String consoleLog) {
         if(SharedUtils.DEBUG_MODE) System.out.println("["+tag + "] " + consoleLog);
+    }
+
+    public static <T> T[] toArray(List<T> list) {
+        if(list.size() < 1) return (T[]) java.lang.reflect.Array.newInstance(Object.class, 0);
+        T[] toR = (T[]) java.lang.reflect.Array.newInstance(list.get(0)
+                .getClass(), list.size());
+        for (int i = 0; i < list.size(); i++) {
+            toR[i] = list.get(i);
+        }
+        return toR;
     }
 }

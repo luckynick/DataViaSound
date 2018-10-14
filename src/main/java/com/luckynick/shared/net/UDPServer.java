@@ -14,11 +14,11 @@ public abstract class UDPServer extends Thread {
 
     public static final String LOG_TAG = "UDPServer";
 
-    private List<UDPMessageObserver> observers = new ArrayList<>();
+    protected List<UDPMessageObserver> observers = new ArrayList<>();
 
-    private DatagramSocket socket;
-    private boolean running;
-    private byte[] buf = new byte[256];
+    protected DatagramSocket socket;
+    protected boolean running;
+    protected byte[] buf = new byte[256];
 
     public UDPServer() {
         try {
