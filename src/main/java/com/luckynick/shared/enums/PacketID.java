@@ -10,13 +10,24 @@ public enum PacketID {
 
     DEVICE,
     JOIN,
+    PREP_SEND_MESSAGE,
+    PREP_RECEIVE_MESSAGE,
+    /**
+     * Device executes action to which it was prepared.
+     */
+    EXECUTE,
 
     OK,
     ERROR,
     ;
 
     public static PacketID ordinalToEnum(int ordinal) {
-        return Arrays.stream(PacketID.values()).filter((pid) -> pid.ordinal() == ordinal).findAny().orElse(UNDEFINED);
+        for (PacketID pid : PacketID.values()) {
+            if (pid.ordinal() == ordinal) {
+                return pid;
+            }
+        }
+        return UNDEFINED;
     }
 
 }

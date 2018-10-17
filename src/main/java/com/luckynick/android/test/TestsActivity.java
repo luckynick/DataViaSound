@@ -6,6 +6,7 @@ import android.os.Bundle;
 import android.support.v7.widget.Toolbar;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.widget.EditText;
 import android.widget.TextView;
 
 import com.luckynick.android.test.net.AndroidNetworkService;
@@ -36,14 +37,19 @@ public class TestsActivity extends BaseActivity implements UDPMessageObserver, P
     public static final String LOG_TAG = "Tests";
 
     //private TCPConnection connectionToController;
-    private volatile boolean controllerConnected = false;
+    //private volatile boolean controllerConnected = false;
 
     AndroidNetworkService network;
     AndroidUDPServer udpServer;
 
+    long connectionTimestamp = 0;
     Client cli = new PlainClient();
 
     private TextView textStatus;
+
+    private boolean nowISendInTest = false;
+    private boolean nowIRecvInTest = false;
+    private String messageToSend = null;
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
@@ -117,7 +123,8 @@ public class TestsActivity extends BaseActivity implements UDPMessageObserver, P
     private void stopTest() {
         cli.close();
         //if(connectionToController != null) connectionToController.close();
-        controllerConnected = false;
+        //controllerConnected = false;
+        connectionTimestamp = 0;
     }
 
     private void terminate() {
@@ -131,20 +138,21 @@ public class TestsActivity extends BaseActivity implements UDPMessageObserver, P
     public void udpMessageReceived(InetAddress address, String received) {
         final String ip = address.getHostAddress();
         Log(LOG_TAG, "Via UDP from "+ ip + ":  " + received);
-        if(controllerConnected) {
-            Log(LOG_TAG, "Already connected.");
-            return;
-        }
         String params[] = received.split("\\s");
-        final String role = params[0], port = params[1];
-        if(TestRole.CONTROLLER.toString().equals(role) && !controllerConnected) {
-            cli.connect(ip, Integer.parseInt(port));
-            /*this.connectionToController = network.connect(ip, Integer.parseInt(port));
-            this.connectionToController.send(Device.class, getFilledDevice());
-            Log(LOG_TAG, "Connected to: " + ip + ':' + port);
-            writeStatus("Connected to: " + ip + ':' + port);
-            controllerConnected = true;*/
+        final String role = params[0];
+        if(TestRole.CONTROLLER.toString().equals(role)) {
+            final String port = params[1], timestampS = params[2];
+            long timestamp = Long.parseLong(timestampS);
+            if(connectionTimestamp != timestamp) {
+                if(cli.isConnected()) cli.close();
+                cli.connect(ip, Integer.parseInt(port));
+                connectionTimestamp = timestamp;
+            }
+            else {
+                Log(LOG_TAG, "Already connected.");
+            }
         }
+        //cli.isConnected()
     }
 
     public void writeStatus(final String toWrite) {
@@ -166,7 +174,6 @@ public class TestsActivity extends BaseActivity implements UDPMessageObserver, P
 
     @Override
     public void onConnect(Client c) {
-        controllerConnected = true;
         Log(LOG_TAG, c.getInetAddress().getHostAddress() + ":" + c.getSocket().getPort() + " connected.");
     }
 
@@ -183,12 +190,46 @@ public class TestsActivity extends BaseActivity implements UDPMessageObserver, P
 
         int id = packetReader.getPacketID();
         if(id == PacketID.REQUEST.ordinal()){
-            int expectedResponse = packetReader.readInt();
-            if(expectedResponse == PacketID.DEVICE.ordinal()) {
-                c.send(new PacketBuilder(Packet.PacketType.Request).withID((short)PacketID.RESPONSE.ordinal())
-                        .withInt(PacketID.DEVICE.ordinal())
-                        .withString(new GSONCustomSerializer<>(Device.class)
-                                .serializeStr(getFilledDevice())).build());
+            Log(LOG_TAG, "Request received.");
+            int expectedAction = packetReader.readInt();
+            switch (PacketID.ordinalToEnum(expectedAction)) {
+                case DEVICE:
+                    writeStatus("Sending back device data");
+                    Log(LOG_TAG, "Sending back device data");
+                    c.send(new PacketBuilder(Packet.PacketType.Request).withID((short)PacketID.RESPONSE.ordinal())
+                            .withInt(PacketID.DEVICE.ordinal())
+                            .withString(new GSONCustomSerializer<>(Device.class)
+                                    .serializeStr(getFilledDevice()))
+                            .build());
+                    break;
+                case PREP_SEND_MESSAGE:
+                    nowISendInTest = true;
+                    messageToSend = packetReader.readString();
+                    Log(LOG_TAG, "Ready to send message '" + messageToSend + "'");
+                    c.send(new PacketBuilder(Packet.PacketType.Request).withID((short)PacketID.RESPONSE.ordinal())
+                            .withInt(PacketID.OK.ordinal())
+                            .withInt(PacketID.PREP_SEND_MESSAGE.ordinal())
+                            .build());
+                    break;
+                case PREP_RECEIVE_MESSAGE:
+                    nowIRecvInTest = true;
+                    Log(LOG_TAG, "Ready to receive message");
+                    c.send(new PacketBuilder(Packet.PacketType.Request).withID((short)PacketID.RESPONSE.ordinal())
+                            .withInt(PacketID.OK.ordinal())
+                            .withInt(PacketID.PREP_RECEIVE_MESSAGE.ordinal())
+                            .build());
+                    break;
+                case EXECUTE:
+                    Log(LOG_TAG, "Executing.");
+                    if(nowISendInTest) {
+                        Log(LOG_TAG, "Sending message '"+messageToSend+"' for test.");
+                        new AsyncPlayMessage().execute(messageToSend);
+                    }
+                    else if(nowIRecvInTest) {
+                        Log(LOG_TAG, "Receiving message for test.");
+                        //new AsyncPlayMessage().execute(messageToSend);
+                    }
+                    break;
             }
         }
     }

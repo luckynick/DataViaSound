@@ -68,7 +68,9 @@ public abstract class NetworkService {
     }
 
     public TCPConnection waitForConnection(final int port) throws ConnectException {
-        Thread bThr = UDPServer.broadcastThread(TestRole.CONTROLLER.toString() + ' ' + port);
+        long currentTimestamp = System.currentTimeMillis();
+        Thread bThr = UDPServer.broadcastThread(TestRole.CONTROLLER.toString() + " " + port + " "
+                + currentTimestamp);
         bThr.start();
         try {
             ServerSocket ss = new ServerSocket(port);

@@ -70,9 +70,7 @@ public class AndroidNetworkService extends NetworkService {
         WifiInfo wi = wifiManager.getConnectionInfo();
         boolean connectedSomewhere = i != null ? i.isConnectedOrConnecting() && (i.getType() == ConnectivityManager.TYPE_WIFI) : false;
         if(!connectedSomewhere) return false;
-        Log(LOG_TAG, "isWifiConnected: " + wi.getSSID() + "==" + "\""+ssid+"\"");
         boolean connectedToSpecific =  ("\""+ssid+"\"").equals(wi.getSSID());
-        Log(LOG_TAG, "isWifiConnected: " + connectedToSpecific);
         return connectedToSpecific;
     }
 
@@ -197,15 +195,6 @@ public class AndroidNetworkService extends NetworkService {
     {
         @Override
         protected TCPConnection doInBackground(Integer... ints)  {
-            /*Socket s = null;
-            try {
-                ServerSocket ss = new ServerSocket(ints[0]);
-                s = ss.accept();
-                SharedUtils.Log(LOG_TAG, "Connected: " + s.isConnected());
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-            return null;*/
             try {
                 return AndroidNetworkService.this.waitForConnection(ints[0]);
             } catch (ConnectException e) {
