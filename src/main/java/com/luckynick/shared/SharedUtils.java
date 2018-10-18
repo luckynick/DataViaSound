@@ -25,6 +25,8 @@ public class SharedUtils {
     public static final int WAIT_TIME_AFTER_FAIL = 2000;
     public static final int COMMAND_PERSISTENCE_ATTEMPTS = 20; //10
 
+    public static final long MAX_AUDIO_RECORD_SIZE = 2000000;//2mb //10000000 //10mb
+
 
     public enum DataStorage {
         ROOT(formPathString("data")),

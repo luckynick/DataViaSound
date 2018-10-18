@@ -32,17 +32,14 @@ import nl.pvdberg.pnet.packet.PacketReader;
 
 import static com.luckynick.custom.Utils.*;
 
-public class TestsActivity extends BaseActivity implements UDPMessageObserver, PNetListener {
+public class TestsActivity extends BaseActivity implements UDPMessageObserver, PNetListener, SoundGenerator.Listener {
 
     public static final String LOG_TAG = "Tests";
-
-    //private TCPConnection connectionToController;
-    //private volatile boolean controllerConnected = false;
 
     AndroidNetworkService network;
     AndroidUDPServer udpServer;
 
-    long connectionTimestamp = 0;
+    volatile long connectionTimestamp = 0;
     Client cli = new PlainClient();
 
     private TextView textStatus;
@@ -88,6 +85,7 @@ public class TestsActivity extends BaseActivity implements UDPMessageObserver, P
     private void prepareForTests() {
         this.network = new AndroidNetworkService(getApplicationContext());
         cli.setClientListener(this);
+        SoundGenerator.subscribePlayStoppedEvent(this);
 
         if(getAsHotspot()) {
             startHotspot();
@@ -122,9 +120,9 @@ public class TestsActivity extends BaseActivity implements UDPMessageObserver, P
 
     private void stopTest() {
         cli.close();
-        //if(connectionToController != null) connectionToController.close();
-        //controllerConnected = false;
+        sr.stopRecord();
         connectionTimestamp = 0;
+        System.gc();
     }
 
     private void terminate() {
@@ -206,6 +204,7 @@ public class TestsActivity extends BaseActivity implements UDPMessageObserver, P
                     nowISendInTest = true;
                     messageToSend = packetReader.readString();
                     Log(LOG_TAG, "Ready to send message '" + messageToSend + "'");
+                    writeStatus("Ready to send message '" + messageToSend + "'");
                     c.send(new PacketBuilder(Packet.PacketType.Request).withID((short)PacketID.RESPONSE.ordinal())
                             .withInt(PacketID.OK.ordinal())
                             .withInt(PacketID.PREP_SEND_MESSAGE.ordinal())
@@ -214,24 +213,92 @@ public class TestsActivity extends BaseActivity implements UDPMessageObserver, P
                 case PREP_RECEIVE_MESSAGE:
                     nowIRecvInTest = true;
                     Log(LOG_TAG, "Ready to receive message");
+                    writeStatus("Ready to receive message");
                     c.send(new PacketBuilder(Packet.PacketType.Request).withID((short)PacketID.RESPONSE.ordinal())
                             .withInt(PacketID.OK.ordinal())
                             .withInt(PacketID.PREP_RECEIVE_MESSAGE.ordinal())
                             .build());
                     break;
-                case EXECUTE:
-                    Log(LOG_TAG, "Executing.");
+                case SEND_MESSAGE:
                     if(nowISendInTest) {
                         Log(LOG_TAG, "Sending message '"+messageToSend+"' for test.");
+                        writeStatus("Sending message '"+messageToSend+"' for test.");
                         new AsyncPlayMessage().execute(messageToSend);
+                        messageToSend = null;
+                        c.send(new PacketBuilder(Packet.PacketType.Request).withID((short)PacketID.RESPONSE.ordinal())
+                                .withInt(PacketID.OK.ordinal())
+                                .withInt(PacketID.SEND_MESSAGE.ordinal())
+                                .build());
                     }
-                    else if(nowIRecvInTest) {
-                        Log(LOG_TAG, "Receiving message for test.");
-                        //new AsyncPlayMessage().execute(messageToSend);
+                    else {
+                        Log(LOG_TAG, "This device is not ready to receive a text.");
+                        c.send(new PacketBuilder(Packet.PacketType.Request).withID((short)PacketID.RESPONSE.ordinal())
+                                .withInt(PacketID.ERROR.ordinal())
+                                .withInt(PacketID.SEND_MESSAGE.ordinal())
+                                .build());
                     }
                     break;
+                case RECEIVE_MESSAGE:
+                    if(nowIRecvInTest) {
+                        Log(LOG_TAG, "Receiving message for test.");
+                        writeStatus("Receiving message for test.");
+                        //new AsyncPlayMessage().execute(messageToSend);
+
+                        new AsyncRecord().execute();
+                        c.send(new PacketBuilder(Packet.PacketType.Request).withID((short)PacketID.RESPONSE.ordinal())
+                                .withInt(PacketID.OK.ordinal())
+                                .withInt(PacketID.RECEIVE_MESSAGE.ordinal())
+                                .build());
+                    }
+                    else {
+                        Log(LOG_TAG, "This device is not ready to send a text.");
+                        c.send(new PacketBuilder(Packet.PacketType.Request).withID((short)PacketID.RESPONSE.ordinal())
+                                .withInt(PacketID.ERROR.ordinal())
+                                .withInt(PacketID.RECEIVE_MESSAGE.ordinal())
+                                .build());
+                    }
+                    break;
+                case TEXT:
+                    Log(LOG_TAG, "Generating the text.");
+                    writeStatus("Generating the text.");
+                    sr.stopRecord();
+
+                    new AsyncIterateForFrequencies().execute();
+                    break;
+                default:
+                    Log(LOG_TAG, "Unknown REQUEST: " + PacketID.ordinalToEnum(expectedAction));
             }
         }
+    }
+
+    /**
+     * Invoked when AsyncIterateForFrequencies finishes it's work.
+     * @param message decoded message
+     */
+    @Override
+    public void iterateForFrequenciesFinished(String message) {
+        Log(LOG_TAG, "iterateForFrequencies was finished. Result: " + message);
+        //((TextView)(findViewById(R.id.detectedText))).setText(message);
+        //finished resolving the text
+        new AsyncTask<Void, Void, Void>() {
+            @Override
+            protected Void doInBackground(Void... voids) {
+                cli.send(new PacketBuilder(Packet.PacketType.Request).withID((short)PacketID.RESPONSE.ordinal())
+                        .withInt(PacketID.TEXT.ordinal())
+                        .withString(message)
+                        .build());
+                return null;
+            }
+        }.execute();
+    }
+
+    @Override
+    public void playStopped() {
+        Log(LOG_TAG, "Play was stopped.");
+        cli.send(new PacketBuilder(Packet.PacketType.Request).withID((short)PacketID.RESPONSE.ordinal())
+                .withInt(PacketID.JOIN.ordinal())
+                .withInt(PacketID.SEND_MESSAGE.ordinal())
+                .build());
     }
 
     protected class AsyncUDPWaiter extends AsyncTask<WifiManager.MulticastLock, Void, Void>

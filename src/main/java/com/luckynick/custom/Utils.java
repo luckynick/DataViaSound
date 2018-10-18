@@ -103,6 +103,6 @@ public class Utils extends SharedUtils {
 
 
     public static void Log(String tag, String consoleLog) {
-        if(SharedUtils.DEBUG_MODE) Log.i(tag, consoleLog);
+        if(SharedUtils.DEBUG_MODE && consoleLog != null) Log.i(tag, consoleLog);
     }
 }

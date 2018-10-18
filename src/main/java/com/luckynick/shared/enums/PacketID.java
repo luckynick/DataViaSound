@@ -9,13 +9,16 @@ public enum PacketID {
     RESPONSE,
 
     DEVICE,
+    TEXT,
+    /**
+     * Device finished executing last task.
+     */
     JOIN,
     PREP_SEND_MESSAGE,
     PREP_RECEIVE_MESSAGE,
-    /**
-     * Device executes action to which it was prepared.
-     */
-    EXECUTE,
+
+    SEND_MESSAGE,
+    RECEIVE_MESSAGE,
 
     OK,
     ERROR,

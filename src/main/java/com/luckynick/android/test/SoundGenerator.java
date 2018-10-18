@@ -5,12 +5,20 @@ import android.media.AudioManager;
 import android.media.AudioTrack;
 import android.media.MediaPlayer;
 
+import com.luckynick.shared.PureFunctionalInterface;
+
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 import static com.luckynick.custom.Utils.*;
 
-public class SoundGenerator{
+public class SoundGenerator {
+
+    public interface Listener {
+        void playStopped();
+    }
 
 	/**
      * Path where existing audio record is stored.
@@ -23,6 +31,8 @@ public class SoundGenerator{
      */
     private int frequenciesArr[];
     public static final String LOG_TAG = "Generator";
+
+    public static List<Listener> playStoppedSubs = new ArrayList<>();
 
     SoundGenerator(String rec, int frArr[])
     {
@@ -66,6 +76,9 @@ public class SoundGenerator{
             play(mAudioTrack, arr);
         }
         mAudioTrack.release();
+        for (Listener sub : playStoppedSubs) {
+            sub.playStopped();
+        }
     }
 
     /**
@@ -130,5 +143,9 @@ public class SoundGenerator{
         }
         mp.release();
         return true;
+    }
+
+    public static void subscribePlayStoppedEvent(Listener sub) {
+        playStoppedSubs.add(sub);
     }
 }

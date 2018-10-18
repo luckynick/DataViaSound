@@ -6,11 +6,14 @@ import android.media.MediaFormat;
 import android.media.MediaMetadataRetriever;
 import android.media.MediaRecorder;
 
+import com.luckynick.shared.SharedUtils;
+
 import static com.luckynick.custom.Utils.*;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -81,7 +84,16 @@ public class SoundRecognizer {
             }
         }
         setFreqMapping(freqArr);
-        locateMidShift();
+        try {
+            locateMidShift();
+        }
+        catch (IndexOutOfBoundsException e) {
+            new File(rec).delete();
+            /*
+            throw new IllegalArgumentException("Record was deleted because IndexOutOfBoundsException happened " +
+                    "during locateMidShift()");
+            */
+        }
     }
 
     /**
@@ -110,7 +122,7 @@ public class SoundRecognizer {
     {
         if(samples == null || midShift <= 0)
         {
-            Log(LOG_TAG, "Samples: " + samples.isEmpty() + ", midShift: " + midShift);
+            Log(LOG_TAG, "Samples: " + (samples != null ? samples.isEmpty() : false) + ", midShift: " + midShift);
 
             return null;
         }
@@ -276,7 +288,7 @@ public class SoundRecognizer {
      * in order for algorithm to work properly.
      * Sets midShift to offset in ms; position in middle of first beep
      */
-    public void locateMidShift()
+    public void locateMidShift() throws IndexOutOfBoundsException
     {
         if(samples == null || frequenciesBinding == null || audioData == null) {
             midShift = -1;
@@ -323,7 +335,7 @@ public class SoundRecognizer {
         Log(LOG_TAG, "rightBorder = " + rightBorder + ", tempDistance = " + tempDistance);
     }
 
-    public boolean checkFreqProximity(int offset, String characters, double precision){
+    public boolean checkFreqProximity(int offset, String characters, double precision) throws IndexOutOfBoundsException{
         int step = 0;
         for(char c : characters.toCharArray()) {
             if(!checkFreqProximity(getFrequency(samples, offset + step), c, precision)) return false;
@@ -442,6 +454,12 @@ public class SoundRecognizer {
      */
     public ArrayList<Short> getSamples() throws IOException
     {
+        File existingRec = new File(recordPath);
+        Log(LOG_TAG, "Size of existing record: " + existingRec.length() + " bytes.");
+        if(existingRec.length() > SharedUtils.MAX_AUDIO_RECORD_SIZE) {
+            existingRec.delete();
+            return null;
+        }
         if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.LOLLIPOP) {
             return null;
         }
@@ -562,10 +580,10 @@ public class SoundRecognizer {
         mr.setAudioChannels(1);
         try {
             mr.prepare();
+            mr.start();
         } catch (IOException e) {
             e.printStackTrace();
         }
-        mr.start();
         while(ifRecord)
         {
             try {
@@ -585,7 +603,16 @@ public class SoundRecognizer {
         } catch (IOException e) {
             e.printStackTrace();
         }
-        locateMidShift();
+        try {
+            locateMidShift();
+        }
+        catch (IndexOutOfBoundsException e) {
+            f.delete();
+            /*
+            throw new IllegalArgumentException("Record was deleted because IndexOutOfBoundsException happened " +
+                    "during locateMidShift()");
+            */
+        }
     }
 
     public boolean isIfRecord() {
