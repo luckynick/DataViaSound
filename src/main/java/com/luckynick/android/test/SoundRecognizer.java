@@ -78,7 +78,13 @@ public class SoundRecognizer {
             audioData.setDataSource(rec);
             try {
                 samples = getSamples();
-            } catch (IOException e) {
+            }
+            catch (IllegalStateException e)
+            {
+                e.printStackTrace();
+                samples = null;
+            }
+            catch (IOException e) {
                 Log("IOException", "Problem getting samples");
                 samples = null;
             }
@@ -170,11 +176,17 @@ public class SoundRecognizer {
             wholeStream += next;
         }
         Log(LOG_TAG, "Offset is " + startT + "ms. Text: " + wholeStream);
-        String result = wholeStream.substring(wholeStream.indexOf(START_TAG) + START_TAG.length(), wholeStream.lastIndexOf(END_TAG));
+        try {
+            String result = wholeStream.substring(wholeStream.indexOf(START_TAG) + START_TAG.length(), wholeStream.lastIndexOf(END_TAG));
+            return fromHex(result);
+        }
+        catch (Exception e) {
+            e.printStackTrace();
+            return e.getClass().getCanonicalName();
+        }
 //        String result = wholeStream.substring(wholeStream.indexOf(START_TAG) + START_TAG.length(), wholeStream.length()).trim();
 
 
-        return fromHex(result);
     }
 
 
@@ -452,13 +464,13 @@ public class SoundRecognizer {
      * @return List of raw samples data
      * @throws IOException
      */
-    public ArrayList<Short> getSamples() throws IOException
+    public ArrayList<Short> getSamples() throws IOException, IllegalStateException
     {
         File existingRec = new File(recordPath);
         Log(LOG_TAG, "Size of existing record: " + existingRec.length() + " bytes.");
         if(existingRec.length() > SharedUtils.MAX_AUDIO_RECORD_SIZE) {
             existingRec.delete();
-            return null;
+            throw new IllegalStateException("Existing audio record was too long.");
         }
         if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.LOLLIPOP) {
             return null;
@@ -467,7 +479,12 @@ public class SoundRecognizer {
         MediaExtractor extractor = new MediaExtractor(); //MediaCodec can't really get audio
         // file headers for processing; MediaExtractor really has to do it
         extractor.setDataSource(recordPath);
-        extractor.selectTrack(0); //we have only one track - our record
+        try {
+            extractor.selectTrack(0); //we have only one track - our record
+        }
+        catch (IllegalArgumentException e) {
+            return new ArrayList<>();
+        }
         MediaCodec.BufferInfo info = new MediaCodec.BufferInfo(); //Object is used because dequeueOutputBuffer(@NotNull BufferInfo),
         // audioData stored in object is not used
         MediaFormat format = extractor.getTrackFormat(0); //MediaExtractor recognizes audio file parameters
@@ -600,7 +617,13 @@ public class SoundRecognizer {
         audioData.setDataSource(recordPath);
         try {
             samples = getSamples();
-        } catch (IOException e) {
+        }
+        catch (IllegalStateException e)
+        {
+            e.printStackTrace();
+            samples = null;
+        }
+        catch (IOException e) {
             e.printStackTrace();
         }
         try {

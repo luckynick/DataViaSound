@@ -1,6 +1,7 @@
 package com.luckynick.shared.net;
 
 import com.luckynick.shared.SharedUtils;
+import com.luckynick.shared.enums.TestRole;
 
 import static com.luckynick.custom.Utils.*;
 
@@ -104,6 +105,15 @@ public abstract class UDPServer extends Thread {
             socket.close();
         }
 
+    }
+
+
+    public static Thread trapConnection() {
+        long currentTimestamp = System.currentTimeMillis();
+        Thread result = UDPServer.broadcastThread(
+                TestRole.CONTROLLER + " " + SharedUtils.TCP_COMMUNICATION_PORT + " " + currentTimestamp);
+        result.start();
+        return result;
     }
 
     public static List<InetAddress> listAllBroadcastAddresses() throws SocketException {

@@ -67,7 +67,7 @@ public abstract class NetworkService {
         return null;
     }
 
-    public TCPConnection waitForConnection(final int port) throws ConnectException {
+    /*public TCPConnection waitForConnection(final int port) throws ConnectException {
         long currentTimestamp = System.currentTimeMillis();
         Thread bThr = UDPServer.broadcastThread(TestRole.CONTROLLER.toString() + " " + port + " "
                 + currentTimestamp);
@@ -83,7 +83,7 @@ public abstract class NetworkService {
             e.printStackTrace();
         }
         return null;
-    }
+    }*/
 
     /**
      * Convert byte array to hex string

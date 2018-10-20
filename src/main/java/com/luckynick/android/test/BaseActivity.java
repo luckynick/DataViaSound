@@ -2,6 +2,7 @@ package com.luckynick.android.test;
 
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.media.AudioTrack;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
@@ -11,6 +12,9 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.WindowManager;
 import android.widget.TextView;
+
+import com.luckynick.shared.enums.SoundProductionUnit;
+import com.luckynick.shared.model.SendParameters;
 
 import static com.luckynick.custom.Utils.*;
 
@@ -189,7 +193,7 @@ public abstract class BaseActivity extends AppCompatActivity implements GetFrequ
                 List<Short> samples = sr.getSamples();
                 message = String.valueOf(sr.getFrequency(samples, ints[0]));
             }
-            catch (IndexOutOfBoundsException e)
+            catch (IndexOutOfBoundsException | IllegalStateException e)
             {
                 message = String.valueOf(-1);
             }
@@ -210,9 +214,22 @@ public abstract class BaseActivity extends AppCompatActivity implements GetFrequ
      */
     public class AsyncPlayMessage extends AsyncTask<String, Void, Void>
     {
+        SendParameters params;
+
+        AsyncPlayMessage() {
+            params = new SendParameters();
+            params.loudnessLevel = 100;
+            params.soundProductionUnit = SoundProductionUnit.LOUD_SPEAKERS;
+        }
+
+        AsyncPlayMessage(SendParameters params) {
+            this.params = params;
+        }
+
         @Override
         protected Void doInBackground(String... strings) {
-            sg.playMessage(strings[0]);
+            Log(LOG_TAG, "Device loudness (params.loudnessLevel): " + params.loudnessLevel);
+            sg.playMessage(strings[0], params.loudnessLevel);
             return null;
         }
     }
@@ -224,15 +241,15 @@ public abstract class BaseActivity extends AppCompatActivity implements GetFrequ
     protected class AsyncIterateForFrequencies extends AsyncTask<Void, Void, String>
     {
         @Override
-        protected String doInBackground(Void... voids) {
-            try
+        protected String doInBackground(Void... voids) throws IndexOutOfBoundsException {
+            return sr.iterateForFrequencies();
+            /*try
             {
-                return sr.iterateForFrequencies();
             }
             catch (IndexOutOfBoundsException e)
             {
                 return "No message detected. Code 1";
-            }
+            }*/
         }
 
         @Override

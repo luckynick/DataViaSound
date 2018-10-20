@@ -44,6 +44,7 @@ public class SharedUtils {
         DICTIONARY(formPathString(DataStorage.MODELS.toString(), "dictionary")),
 
         RESULTS(formPathString(DataStorage.MODELS.toString(), "results")),
+        SINGULAR_RESULT(formPathString(DataStorage.RESULTS.toString(), "singular")),
         ;
 
         private String path;
@@ -78,6 +79,10 @@ public class SharedUtils {
 
     public static String getDateStringForFileName() {
         return new SimpleDateFormat("ddMMyy_HHmmss").format(new Date());
+    }
+
+    public static String getDateStringForFileName(long timeMillis) {
+        return new SimpleDateFormat("ddMMyy_HHmmss").format(new Date(timeMillis));
     }
 
 

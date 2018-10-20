@@ -179,7 +179,6 @@ public class AndroidNetworkService extends NetworkService {
     }*/
 
 
-    @Override
     public TCPConnection waitForConnection(int port) throws ConnectException {
         try {
             new AsyncWaitConnection().execute(port).get();

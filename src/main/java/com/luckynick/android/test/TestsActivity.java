@@ -14,6 +14,10 @@ import com.luckynick.android.test.net.AndroidUDPServer;
 import com.luckynick.custom.Device;
 import com.luckynick.shared.GSONCustomSerializer;
 import com.luckynick.shared.enums.PacketID;
+import com.luckynick.shared.model.ReceiveParameters;
+import com.luckynick.shared.model.ReceiveSessionSummary;
+import com.luckynick.shared.model.SendParameters;
+import com.luckynick.shared.model.SendSessionSummary;
 import com.luckynick.shared.net.UDPMessageObserver;
 import com.luckynick.shared.PureFunctionalInterface;
 import com.luckynick.shared.SharedUtils;
@@ -32,6 +36,9 @@ import nl.pvdberg.pnet.packet.PacketReader;
 
 import static com.luckynick.custom.Utils.*;
 
+//TODO:
+//BUG: loudness level doesn't take an effect
+
 public class TestsActivity extends BaseActivity implements UDPMessageObserver, PNetListener, SoundGenerator.Listener {
 
     public static final String LOG_TAG = "Tests";
@@ -46,7 +53,10 @@ public class TestsActivity extends BaseActivity implements UDPMessageObserver, P
 
     private boolean nowISendInTest = false;
     private boolean nowIRecvInTest = false;
-    private String messageToSend = null;
+    //private String messageToSend = null;
+    volatile long sessionStartTimestamp = -1;
+    volatile SendParameters sendParams;
+    volatile ReceiveParameters receiveParameters;
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
@@ -142,9 +152,9 @@ public class TestsActivity extends BaseActivity implements UDPMessageObserver, P
             final String port = params[1], timestampS = params[2];
             long timestamp = Long.parseLong(timestampS);
             if(connectionTimestamp != timestamp) {
+                connectionTimestamp = timestamp;
                 if(cli.isConnected()) cli.close();
                 cli.connect(ip, Integer.parseInt(port));
-                connectionTimestamp = timestamp;
             }
             else {
                 Log(LOG_TAG, "Already connected.");
@@ -202,9 +212,11 @@ public class TestsActivity extends BaseActivity implements UDPMessageObserver, P
                     break;
                 case PREP_SEND_MESSAGE:
                     nowISendInTest = true;
-                    messageToSend = packetReader.readString();
-                    Log(LOG_TAG, "Ready to send message '" + messageToSend + "'");
-                    writeStatus("Ready to send message '" + messageToSend + "'");
+                    GSONCustomSerializer<SendParameters> sendPSerializer = new GSONCustomSerializer<>(SendParameters.class);
+                    String sendPSer = packetReader.readString();
+                    sendParams = sendPSerializer.deserialize(sendPSer);
+                    Log(LOG_TAG, "Ready to send message '" + sendParams.message + "'");
+                    writeStatus("Ready to send message '" + sendParams.message + "'");
                     c.send(new PacketBuilder(Packet.PacketType.Request).withID((short)PacketID.RESPONSE.ordinal())
                             .withInt(PacketID.OK.ordinal())
                             .withInt(PacketID.PREP_SEND_MESSAGE.ordinal())
@@ -212,6 +224,9 @@ public class TestsActivity extends BaseActivity implements UDPMessageObserver, P
                     break;
                 case PREP_RECEIVE_MESSAGE:
                     nowIRecvInTest = true;
+                    GSONCustomSerializer<ReceiveParameters> recvPSerializer = new GSONCustomSerializer<>(ReceiveParameters.class);
+                    String recvPSer = packetReader.readString();
+                    receiveParameters = recvPSerializer.deserialize(recvPSer);
                     Log(LOG_TAG, "Ready to receive message");
                     writeStatus("Ready to receive message");
                     c.send(new PacketBuilder(Packet.PacketType.Request).withID((short)PacketID.RESPONSE.ordinal())
@@ -221,10 +236,10 @@ public class TestsActivity extends BaseActivity implements UDPMessageObserver, P
                     break;
                 case SEND_MESSAGE:
                     if(nowISendInTest) {
-                        Log(LOG_TAG, "Sending message '"+messageToSend+"' for test.");
-                        writeStatus("Sending message '"+messageToSend+"' for test.");
-                        new AsyncPlayMessage().execute(messageToSend);
-                        messageToSend = null;
+                        Log(LOG_TAG, "Sending message '"+sendParams.message+"' for test.");
+                        writeStatus("Sending message '"+sendParams.message+"' for test.");
+                        sessionStartTimestamp = System.currentTimeMillis();
+                        new AsyncPlayMessage(sendParams).execute(sendParams.message);
                         c.send(new PacketBuilder(Packet.PacketType.Request).withID((short)PacketID.RESPONSE.ordinal())
                                 .withInt(PacketID.OK.ordinal())
                                 .withInt(PacketID.SEND_MESSAGE.ordinal())
@@ -244,6 +259,7 @@ public class TestsActivity extends BaseActivity implements UDPMessageObserver, P
                         writeStatus("Receiving message for test.");
                         //new AsyncPlayMessage().execute(messageToSend);
 
+                        sessionStartTimestamp = System.currentTimeMillis();
                         new AsyncRecord().execute();
                         c.send(new PacketBuilder(Packet.PacketType.Request).withID((short)PacketID.RESPONSE.ordinal())
                                 .withInt(PacketID.OK.ordinal())
@@ -280,24 +296,36 @@ public class TestsActivity extends BaseActivity implements UDPMessageObserver, P
         Log(LOG_TAG, "iterateForFrequencies was finished. Result: " + message);
         //((TextView)(findViewById(R.id.detectedText))).setText(message);
         //finished resolving the text
-        new AsyncTask<Void, Void, Void>() {
-            @Override
-            protected Void doInBackground(Void... voids) {
-                cli.send(new PacketBuilder(Packet.PacketType.Request).withID((short)PacketID.RESPONSE.ordinal())
-                        .withInt(PacketID.TEXT.ordinal())
-                        .withString(message)
-                        .build());
-                return null;
-            }
-        }.execute();
+        String m = message;
+        if(m == null) m = "null";
+        ReceiveSessionSummary summary = new ReceiveSessionSummary();
+        summary.message = message;
+        summary.summarySource = getFilledDevice();
+        summary.sessionStartDate = sessionStartTimestamp;
+        summary.receiveParameters = receiveParameters;
+        GSONCustomSerializer<ReceiveSessionSummary> serializer = new GSONCustomSerializer<>(ReceiveSessionSummary.class);
+        String serializedSummary = serializer.serializeStr(summary);
+        new AsyncSendPacket().execute(new PacketBuilder(Packet.PacketType.Request).withID((short)PacketID.RESPONSE.ordinal())
+                .withInt(PacketID.TEXT.ordinal())
+                .withString(serializedSummary)
+                .build());
     }
 
     @Override
     public void playStopped() {
         Log(LOG_TAG, "Play was stopped.");
+
+        SendSessionSummary summary = new SendSessionSummary();
+        summary.summarySource = getFilledDevice();
+        summary.sessionStartDate = sessionStartTimestamp;
+        summary.sendParameters = sendParams;
+        GSONCustomSerializer<SendSessionSummary> serializer = new GSONCustomSerializer<>(SendSessionSummary.class);
+        String serializedSummary = serializer.serializeStr(summary);
+
         cli.send(new PacketBuilder(Packet.PacketType.Request).withID((short)PacketID.RESPONSE.ordinal())
                 .withInt(PacketID.JOIN.ordinal())
                 .withInt(PacketID.SEND_MESSAGE.ordinal())
+                .withString(serializedSummary)
                 .build());
     }
 
@@ -322,6 +350,22 @@ public class TestsActivity extends BaseActivity implements UDPMessageObserver, P
 
             writeStatus("Connected to SSID " + SharedUtils.SSID);
             return result;
+        }
+
+        @Override
+        public void performProgramTasks() {
+            connected = true;
+        }
+    }
+
+    protected class AsyncSendPacket extends AsyncTask<Packet, Void, Void> implements PureFunctionalInterface
+    {
+        private boolean connected = false;
+        @Override
+        protected Void doInBackground(Packet... voids) {
+            cli.send(voids[0]);
+
+            return null;
         }
 
         @Override
