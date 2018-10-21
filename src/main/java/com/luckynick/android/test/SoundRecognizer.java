@@ -88,17 +88,19 @@ public class SoundRecognizer {
                 Log("IOException", "Problem getting samples");
                 samples = null;
             }
+            catch (OutOfMemoryError e) {
+                e.printStackTrace();
+                samples = null;
+                new File(rec).delete();
+            }
         }
         setFreqMapping(freqArr);
         try {
             locateMidShift();
         }
         catch (IndexOutOfBoundsException e) {
+            e.printStackTrace();
             new File(rec).delete();
-            /*
-            throw new IllegalArgumentException("Record was deleted because IndexOutOfBoundsException happened " +
-                    "during locateMidShift()");
-            */
         }
     }
 
@@ -176,14 +178,18 @@ public class SoundRecognizer {
             wholeStream += next;
         }
         Log(LOG_TAG, "Offset is " + startT + "ms. Text: " + wholeStream);
-        try {
-            String result = wholeStream.substring(wholeStream.indexOf(START_TAG) + START_TAG.length(), wholeStream.lastIndexOf(END_TAG));
-            return fromHex(result);
+        String result = wholeStream;
+        result = result.substring(wholeStream.indexOf(START_TAG) + START_TAG.length(), wholeStream.lastIndexOf(END_TAG));
+        return fromHex(result);
+        /*try {
         }
         catch (Exception e) {
             e.printStackTrace();
-            return e.getClass().getCanonicalName();
-        }
+            throw new IllegalStateException("fromHex has thrown an exception: " + e.getClass().getCanonicalName());
+
+//            e.printStackTrace();
+//            return e.getClass().getCanonicalName();
+        }*/
 //        String result = wholeStream.substring(wholeStream.indexOf(START_TAG) + START_TAG.length(), wholeStream.length()).trim();
 
 
@@ -215,6 +221,10 @@ public class SoundRecognizer {
         }
         catch (IndexOutOfBoundsException ex)
         {
+            /*
+            ex.printStackTrace();
+            throw new IndexOutOfBoundsException("Frequency can't be counted: position is too close to record borders.");
+            */
             return -1; //can't be counted; position is too close to record borders
             //Log.w("Freq counting alg", "Out of bounds: " + (time + i) + "ms");
         }
@@ -483,6 +493,7 @@ public class SoundRecognizer {
             extractor.selectTrack(0); //we have only one track - our record
         }
         catch (IllegalArgumentException e) {
+            e.printStackTrace();
             return new ArrayList<>();
         }
         MediaCodec.BufferInfo info = new MediaCodec.BufferInfo(); //Object is used because dequeueOutputBuffer(@NotNull BufferInfo),
@@ -571,8 +582,8 @@ public class SoundRecognizer {
     }
 
     /**
-     * Record new audiofile in path set in recordPath variable.
-     * Records till ifRecord is set to false from another threads.
+     * Record new audiofile to path set in recordPath variable.
+     * Records untill ifRecord is set to false from another threads.
      */
     public void record()
     {
@@ -613,6 +624,7 @@ public class SoundRecognizer {
         mr.reset();
         mr.release();
 
+
         audioData = new MediaMetadataRetriever();
         audioData.setDataSource(recordPath);
         try {
@@ -630,12 +642,10 @@ public class SoundRecognizer {
             locateMidShift();
         }
         catch (IndexOutOfBoundsException e) {
+            e.printStackTrace();
             f.delete();
-            /*
-            throw new IllegalArgumentException("Record was deleted because IndexOutOfBoundsException happened " +
-                    "during locateMidShift()");
-            */
         }
+
     }
 
     public boolean isIfRecord() {

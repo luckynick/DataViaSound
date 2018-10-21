@@ -47,12 +47,12 @@ public class TestsActivity extends BaseActivity implements UDPMessageObserver, P
     AndroidUDPServer udpServer;
 
     volatile long connectionTimestamp = 0;
-    Client cli = new PlainClient();
+    volatile Client cli = new PlainClient();
 
     private TextView textStatus;
 
-    private boolean nowISendInTest = false;
-    private boolean nowIRecvInTest = false;
+    private volatile boolean nowISendInTest = false;
+    private volatile boolean nowIRecvInTest = false;
     //private String messageToSend = null;
     volatile long sessionStartTimestamp = -1;
     volatile SendParameters sendParams;
@@ -191,6 +191,14 @@ public class TestsActivity extends BaseActivity implements UDPMessageObserver, P
         stopTest();
     }
 
+    private void resetState() {
+        nowISendInTest = false;
+        nowIRecvInTest = false;
+        sessionStartTimestamp = -1;
+        SendParameters sendParams = null;
+        ReceiveParameters receiveParameters = null;
+    }
+
     @Override
     public void onReceive(Packet p, Client c) throws IOException {
         Log(LOG_TAG, "Received "+p.toString());
@@ -211,6 +219,7 @@ public class TestsActivity extends BaseActivity implements UDPMessageObserver, P
                             .build());
                     break;
                 case PREP_SEND_MESSAGE:
+                    resetState();
                     nowISendInTest = true;
                     GSONCustomSerializer<SendParameters> sendPSerializer = new GSONCustomSerializer<>(SendParameters.class);
                     String sendPSer = packetReader.readString();
@@ -223,6 +232,7 @@ public class TestsActivity extends BaseActivity implements UDPMessageObserver, P
                             .build());
                     break;
                 case PREP_RECEIVE_MESSAGE:
+                    resetState();
                     nowIRecvInTest = true;
                     GSONCustomSerializer<ReceiveParameters> recvPSerializer = new GSONCustomSerializer<>(ReceiveParameters.class);
                     String recvPSer = packetReader.readString();
@@ -292,17 +302,18 @@ public class TestsActivity extends BaseActivity implements UDPMessageObserver, P
      * @param message decoded message
      */
     @Override
-    public void iterateForFrequenciesFinished(String message) {
-        Log(LOG_TAG, "iterateForFrequencies was finished. Result: " + message);
+    public void iterateForFrequenciesFinished(String message, Exception e) {
+        Log(LOG_TAG, "iterateForFrequencies was finished. Result: " + message + ", exc: " + e);
         //((TextView)(findViewById(R.id.detectedText))).setText(message);
         //finished resolving the text
         String m = message;
         if(m == null) m = "null";
         ReceiveSessionSummary summary = new ReceiveSessionSummary();
-        summary.message = message;
+        summary.message = m;
         summary.summarySource = getFilledDevice();
         summary.sessionStartDate = sessionStartTimestamp;
         summary.receiveParameters = receiveParameters;
+        summary.exceptionDuringDecoding = e;
         GSONCustomSerializer<ReceiveSessionSummary> serializer = new GSONCustomSerializer<>(ReceiveSessionSummary.class);
         String serializedSummary = serializer.serializeStr(summary);
         new AsyncSendPacket().execute(new PacketBuilder(Packet.PacketType.Request).withID((short)PacketID.RESPONSE.ordinal())

@@ -18,4 +18,5 @@ public class ReceiveSessionSummary {
     public ReceiveParameters receiveParameters;
     public String message;
     public long sessionStartDate;
+    public Exception exceptionDuringDecoding;
 }

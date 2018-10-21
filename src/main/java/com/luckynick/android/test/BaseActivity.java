@@ -133,7 +133,7 @@ public abstract class BaseActivity extends AppCompatActivity implements GetFrequ
      * @param message decoded message
      */
     @Override
-    public void iterateForFrequenciesFinished(String message) {
+    public void iterateForFrequenciesFinished(String message, Exception e) {
         ((TextView)(findViewById(R.id.detectedText))).setText(message);
     }
 
@@ -240,22 +240,26 @@ public abstract class BaseActivity extends AppCompatActivity implements GetFrequ
      */
     protected class AsyncIterateForFrequencies extends AsyncTask<Void, Void, String>
     {
+        private Exception exception = null;
+
         @Override
-        protected String doInBackground(Void... voids) throws IndexOutOfBoundsException {
-            return sr.iterateForFrequencies();
-            /*try
+        protected String doInBackground(Void... voids) {
+            try
             {
+                return sr.iterateForFrequencies();
             }
-            catch (IndexOutOfBoundsException e)
+            catch (Exception e)
             {
-                return "No message detected. Code 1";
-            }*/
+                e.printStackTrace();
+                exception = e;
+                return null;
+            }
         }
 
         @Override
         protected void onPostExecute(String s) {
             Log(LOG_TAG, s);
-            iterateForFrequenciesFinished(s);
+            iterateForFrequenciesFinished(s, exception);
         }
     }
 }

@@ -92,7 +92,7 @@ public class SoundGenerator {
     {
         String message = JUNK_RIGHT + START_TAG; //junk here for test
         message += toHex(m);
-        message += END_TAG + JUNK_RIGHT;
+        message += END_TAG + JUNK_RIGHT + JUNK_RIGHT;
         Log(LOG_TAG, "Playing new message: " + message);
         if(m.equals("")) return;
         int numSamples = SAMPLE_RATE * BEEP_DURATION / 1000;

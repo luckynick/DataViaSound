@@ -5,5 +5,5 @@ package com.luckynick.android.test;
  */
 
 public interface IterateForFrequenciesHandler {
-    public void iterateForFrequenciesFinished(String message);
+    public void iterateForFrequenciesFinished(String message, Exception e);
 }
