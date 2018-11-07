@@ -19,9 +19,6 @@ public abstract class NetworkService {
 
     public static final String LOG_TAG = "NetworkService";
 
-    //TODO:
-    //arp doesn't see hotspot host sometimes, try to initiate connection from hotspot
-
     public static final String SSID = SharedUtils.SSID, PASSWORD = SharedUtils.PASSWORD;
     public static final boolean THIS_IS_WIFI_HOTSPOT = false;
     public static final String WIFI_SUBNET = SharedUtils.WIFI_SUBNET;

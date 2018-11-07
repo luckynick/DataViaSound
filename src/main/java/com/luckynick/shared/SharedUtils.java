@@ -45,6 +45,8 @@ public class SharedUtils {
 
         RESULTS(formPathString(DataStorage.MODELS.toString(), "results")),
         SINGULAR_RESULT(formPathString(DataStorage.RESULTS.toString(), "singular")),
+        SEQUENTIAL_REPORT(formPathString(DataStorage.RESULTS.toString(), "report")),
+        CUMULATED_REPORT(formPathString(DataStorage.RESULTS.toString(), "cumulated")),
         ;
 
         private String path;

@@ -195,8 +195,8 @@ public class TestsActivity extends BaseActivity implements UDPMessageObserver, P
         nowISendInTest = false;
         nowIRecvInTest = false;
         sessionStartTimestamp = -1;
-        SendParameters sendParams = null;
-        ReceiveParameters receiveParameters = null;
+        sendParams = null;
+        receiveParameters = null;
     }
 
     @Override

@@ -4,6 +4,7 @@ public enum DistanceUnit {
 
     Centimeter(1.0),
     LaptopWidth(38.0),
+    PlatformLength(12.0),
     ;
 
     private double centimetersInOneUnit;
