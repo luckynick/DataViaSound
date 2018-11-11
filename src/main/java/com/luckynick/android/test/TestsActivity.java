@@ -97,18 +97,23 @@ public class TestsActivity extends BaseActivity implements UDPMessageObserver, P
         cli.setClientListener(this);
         SoundGenerator.subscribePlayStoppedEvent(this);
 
-        if(getAsHotspot()) {
-            startHotspot();
-            new AsyncUDPWaiter().execute(null, null);
+        try {
+            if(getAsHotspot()) {
+                startHotspot();
+                new AsyncUDPWaiter().execute(null, null).get();
+            }
+            else if(network.isApOn()) {
+                new AsyncUDPWaiter().execute(null, null).get();
+            }
+            else {
+                WifiManager.MulticastLock lock = persistConnectWifi();
+                new AsyncUDPWaiter().execute(lock).get();
+            }
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        } catch (ExecutionException e) {
+            e.printStackTrace();
         }
-        else if(network.isApOn()) {
-            new AsyncUDPWaiter().execute(null, null);
-        }
-        else {
-            WifiManager.MulticastLock lock = persistConnectWifi();
-            new AsyncUDPWaiter().execute(lock);
-        }
-
     }
 
     private WifiManager.MulticastLock persistConnectWifi() {
@@ -250,6 +255,13 @@ public class TestsActivity extends BaseActivity implements UDPMessageObserver, P
                         writeStatus("Sending message '"+sendParams.message+"' for test.");
                         sessionStartTimestamp = System.currentTimeMillis();
                         new AsyncPlayMessage(sendParams).execute(sendParams.message);
+                        /*try {
+                            new AsyncPlayMessage(sendParams).execute(sendParams.message).get();
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        } catch (ExecutionException e) {
+                            e.printStackTrace();
+                        }*/
                         c.send(new PacketBuilder(Packet.PacketType.Request).withID((short)PacketID.RESPONSE.ordinal())
                                 .withInt(PacketID.OK.ordinal())
                                 .withInt(PacketID.SEND_MESSAGE.ordinal())
@@ -267,10 +279,16 @@ public class TestsActivity extends BaseActivity implements UDPMessageObserver, P
                     if(nowIRecvInTest) {
                         Log(LOG_TAG, "Receiving message for test.");
                         writeStatus("Receiving message for test.");
-                        //new AsyncPlayMessage().execute(messageToSend);
 
                         sessionStartTimestamp = System.currentTimeMillis();
                         new AsyncRecord().execute();
+                        /*try {
+                            new AsyncRecord().execute().get();
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        } catch (ExecutionException e) {
+                            e.printStackTrace();
+                        }*/
                         c.send(new PacketBuilder(Packet.PacketType.Request).withID((short)PacketID.RESPONSE.ordinal())
                                 .withInt(PacketID.OK.ordinal())
                                 .withInt(PacketID.RECEIVE_MESSAGE.ordinal())

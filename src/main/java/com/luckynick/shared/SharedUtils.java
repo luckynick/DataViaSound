@@ -119,4 +119,22 @@ public class SharedUtils {
         }
         return toR;
     }
+
+    public static class Counter {
+
+        private int c = 0;
+        private int till;
+
+        public Counter(int max) {
+            this.till = max;
+        }
+
+        public void increment() {
+            c++;
+        }
+
+        public boolean reachedMaximum() {
+            return c >= till;
+        }
+    }
 }
