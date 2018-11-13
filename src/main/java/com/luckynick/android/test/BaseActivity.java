@@ -12,11 +12,14 @@ import android.view.MenuItem;
 import android.view.WindowManager;
 import android.widget.TextView;
 
+import com.luckynick.shared.enums.SoundConsumptionUnit;
+import com.luckynick.shared.enums.SoundProductionUnit;
+import com.luckynick.shared.model.ReceiveParameters;
+import com.luckynick.shared.model.SendParameters;
+
 import static com.luckynick.custom.Utils.*;
 
 import java.io.IOException;
-import java.net.ServerSocket;
-import java.net.Socket;
 import java.util.List;
 
 import static com.luckynick.custom.Utils.NUM_OF_RANDOM_BEEPS;
@@ -32,7 +35,8 @@ public abstract class BaseActivity extends AppCompatActivity implements GetFrequ
     SoundGenerator sg;
     SoundRecognizer sr;
     String rec;
-    int frequenciesArray[];
+    int frequenciesArray_600_2000[];
+    //int frequenciesArray_500_15500[];
     Menu menu;
 
     SharedPreferences sharedPrefs;
@@ -44,9 +48,10 @@ public abstract class BaseActivity extends AppCompatActivity implements GetFrequ
         super.onCreate(savedInstanceState);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         rec = getExternalFilesDir(null).toString() + "/record.3gp"; //mp3
-        frequenciesArray = getResources().getIntArray(R.array.frequencies);
-        sg = new SoundGenerator(rec, frequenciesArray);
-        sr = new SoundRecognizer(rec, frequenciesArray);
+        frequenciesArray_600_2000 = getResources().getIntArray(R.array.frequencies_600_2000);
+        //frequenciesArray_500_15500 = getResources().getIntArray(R.array.frequencies_500_15500);
+        sg = new SoundGenerator(rec);
+        sr = new SoundRecognizer(frequenciesArray_600_2000, 0, rec);
         Log(LOG_TAG, rec);
 
         sharedPrefs = getSharedPreferences("DataViaSound", 0);
@@ -64,6 +69,7 @@ public abstract class BaseActivity extends AppCompatActivity implements GetFrequ
     @Override
     public void onResume(){
         super.onResume();
+        Log(LOG_TAG, "onResume event.");
         if(menu == null) return;
         MenuItem hotspotCheck = menu.findItem(R.id.asHotspotCkeckbox);
         hotspotCheck.setChecked(this.isAsHotspot);
@@ -88,14 +94,14 @@ public abstract class BaseActivity extends AppCompatActivity implements GetFrequ
                 {
                     message += (char)(Math.random() * 128);
                 }
-                new MainActivity.AsyncPlayMessage().execute(message);
+                new MainActivity.AsyncPlayMessage(frequenciesArray_600_2000).execute(message);
                 break;
             case R.id.recordQuickItem:
-                if(!sr.isIfRecord()) new MainActivity.AsyncRecord().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
+                if(!sr.isIfRecord()) new MainActivity.AsyncRecord(frequenciesArray_600_2000, 0).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
                 else sr.stopRecord();
                 break;
             case R.id.experimentItem:
-                sr.iterateForFrequencies(50);
+                sr.iterateForFrequencies(frequenciesArray_600_2000, 0, 50);
                 break;
             case R.id.joinTestsItem:
                 Intent intent = new Intent(this, TestsActivity.class);
@@ -128,7 +134,7 @@ public abstract class BaseActivity extends AppCompatActivity implements GetFrequ
      * @param message decoded message
      */
     @Override
-    public void iterateForFrequenciesFinished(String message) {
+    public void iterateForFrequenciesFinished(String message, Exception e) {
         ((TextView)(findViewById(R.id.detectedText))).setText(message);
     }
 
@@ -168,9 +174,16 @@ public abstract class BaseActivity extends AppCompatActivity implements GetFrequ
      */
     public class AsyncRecord extends AsyncTask<Void, Void, Void>
     {
+        int[] freqArr;
+        int freqBindingBase;
+        public AsyncRecord(int[] freqArr, int freqBindingBase) {
+            this.freqArr = freqArr;
+            this.freqBindingBase = freqBindingBase;
+        }
+
         @Override
         protected Void doInBackground(Void... strings) {
-            sr.record();
+            sr.record(freqArr, freqBindingBase);
             return null;
         }
     }
@@ -188,7 +201,7 @@ public abstract class BaseActivity extends AppCompatActivity implements GetFrequ
                 List<Short> samples = sr.getSamples();
                 message = String.valueOf(sr.getFrequency(samples, ints[0]));
             }
-            catch (IndexOutOfBoundsException e)
+            catch (IndexOutOfBoundsException | IllegalStateException e)
             {
                 message = String.valueOf(-1);
             }
@@ -209,9 +222,26 @@ public abstract class BaseActivity extends AppCompatActivity implements GetFrequ
      */
     public class AsyncPlayMessage extends AsyncTask<String, Void, Void>
     {
+        SendParameters params;
+        int[] freqArr;
+
+        AsyncPlayMessage(int[] freqArr) {
+            SendParameters params = new SendParameters();
+            params.loudnessLevel = 100;
+            params.soundProductionUnit = SoundProductionUnit.LOUD_SPEAKERS;
+            this.params = params;
+            this.freqArr = freqArr;
+        }
+
+        AsyncPlayMessage(int[] freqArr, SendParameters params) {
+            this.params = params;
+            this.freqArr = freqArr;
+        }
+
         @Override
         protected Void doInBackground(String... strings) {
-            sg.playMessage(strings[0]);
+            Log(LOG_TAG, "Device loudness (params.loudnessLevel): " + params.loudnessLevel);
+            sg.playMessage(freqArr, params.frequenciesBindingShift, strings[0], params.loudnessLevel);
             return null;
         }
     }
@@ -222,22 +252,39 @@ public abstract class BaseActivity extends AppCompatActivity implements GetFrequ
      */
     protected class AsyncIterateForFrequencies extends AsyncTask<Void, Void, String>
     {
+        private Exception exception = null;
+        ReceiveParameters params;
+        int[] freqArr;
+
+        public AsyncIterateForFrequencies(int[] freqArr) {
+            this.params = new ReceiveParameters();
+            this.params.soundConsumptionUnit = SoundConsumptionUnit.MICROPHONE;
+            this.freqArr = freqArr;
+        }
+
+        public AsyncIterateForFrequencies(int[] freqArr, ReceiveParameters params) {
+            this.params = params;
+            this.freqArr = freqArr;
+        }
+
         @Override
         protected String doInBackground(Void... voids) {
             try
             {
-                return sr.iterateForFrequencies();
+                return sr.iterateForFrequencies(freqArr, params.frequenciesBindingShift);
             }
-            catch (IndexOutOfBoundsException e)
+            catch (Exception e)
             {
-                return "No message detected. Code 1";
+                e.printStackTrace();
+                exception = e;
+                return null;
             }
         }
 
         @Override
         protected void onPostExecute(String s) {
             Log(LOG_TAG, s);
-            iterateForFrequenciesFinished(s);
+            iterateForFrequenciesFinished(s, exception);
         }
     }
 }

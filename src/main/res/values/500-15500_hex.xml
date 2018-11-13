@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <resources>
-  <integer-array name="frequencies_600_2000">
+  <integer-array name="frequencies_500_15500">
     <item count="0">-1</item>
     <item count="1">-1</item>
     <item count="2">-1</item>
@@ -49,16 +49,16 @@
     <item count="45">-1</item>
     <item count="46">-1</item>
     <item count="47">-1</item>
-    <item count="48">600</item>
-    <item count="49">700</item>
-    <item count="50">800</item>
-    <item count="51">900</item>
-    <item count="52">1000</item>
-    <item count="53">1100</item>
-    <item count="54">1200</item>
-    <item count="55">1300</item>
-    <item count="56">1400</item>
-    <item count="57">1500</item>
+    <item count="48">500</item>
+    <item count="49">1500</item>
+    <item count="50">2500</item>
+    <item count="51">3500</item>
+    <item count="52">4500</item>
+    <item count="53">5500</item>
+    <item count="54">6500</item>
+    <item count="55">7500</item>
+    <item count="56">8500</item>
+    <item count="57">9500</item>
     <item count="58">-1</item>
     <item count="59">-1</item>
     <item count="60">-1</item>
@@ -66,12 +66,12 @@
     <item count="62">-1</item>
     <item count="63">-1</item>
     <item count="64">-1</item>
-    <item count="65">1600</item>
-    <item count="66">1700</item>
-    <item count="67">1800</item>
-    <item count="68">1900</item>
-    <item count="69">2000</item>
-    <item count="70">2100</item>
+    <item count="65">10500</item>
+    <item count="66">11500</item>
+    <item count="67">12500</item>
+    <item count="68">13500</item>
+    <item count="69">14500</item>
+    <item count="70">15500</item>
     <item count="71">-1</item>
     <item count="72">-1</item>
     <item count="73">-1</item>

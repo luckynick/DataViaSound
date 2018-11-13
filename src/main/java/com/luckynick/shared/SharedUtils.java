@@ -6,6 +6,7 @@ import java.io.File;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 public class SharedUtils {
@@ -24,6 +25,8 @@ public class SharedUtils {
     public static final int WAIT_TIME_AFTER_FAIL = 2000;
     public static final int COMMAND_PERSISTENCE_ATTEMPTS = 20; //10
 
+    public static final long MAX_AUDIO_RECORD_SIZE = 2000000;//2mb //10000000 //10mb
+
 
     public enum DataStorage {
         ROOT(formPathString("data")),
@@ -38,8 +41,12 @@ public class SharedUtils {
         SINGLE(formPathString(DataStorage.PROFILES.toString(), "single")),
         SEQUENTIAL(formPathString(DataStorage.PROFILES.toString(), "sequential")),
         SCENARIO(formPathString(DataStorage.PROFILES.toString(), "scenario")),
+        DICTIONARY(formPathString(DataStorage.MODELS.toString(), "dictionary")),
 
         RESULTS(formPathString(DataStorage.MODELS.toString(), "results")),
+        SINGULAR_RESULT(formPathString(DataStorage.RESULTS.toString(), "singular")),
+        SEQUENTIAL_REPORT(formPathString(DataStorage.RESULTS.toString(), "report")),
+        CUMULATED_REPORT(formPathString(DataStorage.RESULTS.toString(), "cumulated")),
         ;
 
         private String path;
@@ -56,6 +63,10 @@ public class SharedUtils {
         public String getFullPath(String fileName) {
             return formPathString(this.toString(), fileName);
         }
+
+        public String getDirPath() {
+            return toString();
+        }
     }
 
     public static String formPathString(String ... elems) {
@@ -70,6 +81,10 @@ public class SharedUtils {
 
     public static String getDateStringForFileName() {
         return new SimpleDateFormat("ddMMyy_HHmmss").format(new Date());
+    }
+
+    public static String getDateStringForFileName(long timeMillis) {
+        return new SimpleDateFormat("ddMMyy_HHmmss").format(new Date(timeMillis));
     }
 
 
@@ -93,5 +108,73 @@ public class SharedUtils {
 
     protected static void Log(String tag, String consoleLog) {
         if(SharedUtils.DEBUG_MODE) System.out.println("["+tag + "] " + consoleLog);
+    }
+
+    public static <T> T[] toArray(List<T> list) {
+        if(list.size() < 1) return (T[]) java.lang.reflect.Array.newInstance(Object.class, 0);
+        T[] toR = (T[]) java.lang.reflect.Array.newInstance(list.get(0)
+                .getClass(), list.size());
+        for (int i = 0; i < list.size(); i++) {
+            toR[i] = list.get(i);
+        }
+        return toR;
+    }
+
+    public static class Counter {
+
+        private int c = 0;
+        private int till;
+
+        public Counter(int max) {
+            this.till = max;
+        }
+
+        public void increment() {
+            c++;
+        }
+
+        public boolean reachedMaximum() {
+            return c >= till;
+        }
+    }
+
+    /*
+    public static final int SPECTRAL_ANALYSIS_STRING_LEN = 10;
+    public static final int[] SPECTRAL_ANALYSIS_CHARS = new int[]{48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 65, 66, 67, 68, 69, 70};
+    */
+
+
+    /**
+     * Make string with hex 8-bit numbers from text.
+     * @param message text for which hex string has to be counted
+     * @return string which contains hex representation of every single character in message
+     */
+    public static String toHex(String message)
+    {
+        if(message == null) return null;
+        String s = "";
+        for(int i = 0; i < message.length(); i++)
+        {
+            s += String.format("%02X", (byte)message.charAt(i));
+        }
+        return s;
+    }
+
+    /**
+     * Decode string with hex 8-bit numbers to text.
+     * @param hex string which contains hex representation of characters
+     * @return text decoded from hex string
+     */
+    public static String fromHex(String hex) throws StringIndexOutOfBoundsException, NumberFormatException
+    {
+        String res = "";
+        for(int i = 0; i < hex.length(); i += 2)
+        {
+            String one = "0x" + hex.charAt(i) + "" + hex.charAt(i + 1);
+            System.out.println("One is " + one);
+            res += (char) (int) Integer.decode(one);
+        }
+        System.out.println(res);
+        return res;
     }
 }
