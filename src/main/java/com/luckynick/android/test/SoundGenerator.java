@@ -31,15 +31,13 @@ public class SoundGenerator {
      * Value is actual frequency which correspond to this symbol. If value is -1, then
      * symbol is not used in program.
      */
-    private int frequenciesArr[];
     public static final String LOG_TAG = "Generator";
 
     public static List<Listener> playStoppedSubs = new ArrayList<>();
 
-    SoundGenerator(String rec, int frArr[])
+    SoundGenerator(String rec)
     {
         recordPath = rec;
-        frequenciesArr = frArr;
     }
 
     /**
@@ -47,7 +45,7 @@ public class SoundGenerator {
      * encodes text to frequencies and creates audio data, which is further played through speakers.
      * @param m text message which has to be encoded and played
      */
-    public void playMessage(String m)
+    public void playMessage(int frequenciesArr[], int freqBindingBase, String m)
     {
         String message = JUNK_RIGHT + START_TAG; //junk here for test
         message += toHex(m);
@@ -60,9 +58,9 @@ public class SoundGenerator {
         for (int i = 0; i < message.length(); i++) {
             int index = (int)message.charAt(i);
             double currentFreq;
-            if(index >= frequenciesArr.length) currentFreq = frequenciesArr[ERROR_CHAR];
-            else currentFreq = frequenciesArr[message.charAt(i)];
-            if(currentFreq == -1.0) currentFreq = frequenciesArr[ERROR_CHAR];
+            if(index >= frequenciesArr.length) currentFreq = frequenciesArr[ERROR_CHAR] + freqBindingBase;
+            else currentFreq = frequenciesArr[message.charAt(i)] + freqBindingBase;
+            if(currentFreq == -1.0) currentFreq = frequenciesArr[ERROR_CHAR] + freqBindingBase;
             Log(LOG_TAG, "Freq for symb '" + message.charAt(i) + "' num " + i + ": " + currentFreq);
             for (int j = 0; j < mSound[i].length; j++) {
                 mSound[i][j] = Math.sin(2.0 * Math.PI * j / (SAMPLE_RATE / currentFreq));
@@ -88,11 +86,20 @@ public class SoundGenerator {
      * @param m
      * @param loudnessLevel from 0 to 100
      */
-    public void playMessage(String m, final int loudnessLevel)
+    public void playMessage(int frequenciesArr[], int freqBindingBase, String m, final int loudnessLevel)
     {
         String message = JUNK_RIGHT + START_TAG; //junk here for test
         message += toHex(m);
         message += END_TAG + JUNK_RIGHT + JUNK_RIGHT;
+        /*String message;
+        if(wrapInTags) {
+            message = JUNK_RIGHT + START_TAG; //junk here for test
+            message += toHex(m);
+            message += END_TAG + JUNK_RIGHT + JUNK_RIGHT;
+        }
+        else {
+            message = toHex(m);
+        }*/
         Log(LOG_TAG, "Playing new message: " + message);
         if(m.equals("")) return;
         int numSamples = SAMPLE_RATE * BEEP_DURATION / 1000;
@@ -101,9 +108,9 @@ public class SoundGenerator {
         for (int i = 0; i < message.length(); i++) {
             int index = (int)message.charAt(i);
             double currentFreq;
-            if(index >= frequenciesArr.length) currentFreq = frequenciesArr[ERROR_CHAR];
-            else currentFreq = frequenciesArr[message.charAt(i)];
-            if(currentFreq == -1.0) currentFreq = frequenciesArr[ERROR_CHAR];
+            if(index >= frequenciesArr.length) currentFreq = frequenciesArr[ERROR_CHAR] + freqBindingBase;
+            else currentFreq = frequenciesArr[message.charAt(i)] + freqBindingBase;
+            if(currentFreq == -1.0) currentFreq = frequenciesArr[ERROR_CHAR] + freqBindingBase;
             Log(LOG_TAG, "Freq for symb '" + message.charAt(i) + "' num " + i + ": " + currentFreq);
             for (int j = 0; j < mSound[i].length; j++) {
                 mSound[i][j] = Math.sin(2.0 * Math.PI * j / (SAMPLE_RATE / currentFreq));

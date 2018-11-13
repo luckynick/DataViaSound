@@ -35,12 +35,6 @@ public class SoundRecognizer {
      */
     private MediaMetadataRetriever audioData;
     /**
-     * Binding of frequencies. Indexes of array represent decimal code of ASCII symbols.
-     * Value is actual frequency which correspond to this symbol. If value is -1, then
-     * symbol is not used in program.
-     */
-    private int frequenciesBinding[];
-    /**
      * Length in between characters in Hz in array of frequencies.
      * Counted on program start or when new record is created.
      */
@@ -64,12 +58,11 @@ public class SoundRecognizer {
     /**
      * Try to open record if exists and extract basic data from it.
      * @param rec
-     * @param freqArr
      * @throws IllegalArgumentException if record path or binding of frequencies are empty
      */
-    SoundRecognizer(String rec, int freqArr[]) throws IllegalArgumentException
+    SoundRecognizer(int[] frequenciesBinding, int freqBindingBase, String rec) throws IllegalArgumentException
     {
-        if(rec.isEmpty() || rec == null || freqArr == null || freqArr.length == 0)
+        if(rec.isEmpty() || rec == null || frequenciesBinding == null || frequenciesBinding.length == 0)
             throw new IllegalArgumentException("You can't pass empty arguments to this constructor.");
         recordPath = rec;
         if(new File(rec).exists())
@@ -94,9 +87,9 @@ public class SoundRecognizer {
                 new File(rec).delete();
             }
         }
-        setFreqMapping(freqArr);
+        setFreqMapping(frequenciesBinding);
         try {
-            locateMidShift();
+            locateMidShift(frequenciesBinding, freqBindingBase);
         }
         catch (IndexOutOfBoundsException e) {
             e.printStackTrace();
@@ -105,12 +98,11 @@ public class SoundRecognizer {
     }
 
     /**
-     * Set binding and count biggest distance between used frequencies.
+     * Count biggest distance between used frequencies.
      * @param freqArr binding of ASCII characters to frequencies
      */
     private void setFreqMapping(int freqArr[])
     {
-        frequenciesBinding = freqArr;
         int biggestLength = 0;
         for(int i = 1; i < freqArr.length; i++)
         {
@@ -126,7 +118,7 @@ public class SoundRecognizer {
      *
      * @return
      */
-    public String iterateForFrequencies()
+    public String iterateForFrequencies(int frequenciesBinding[], int freqBindingBase)
     {
         if(samples == null || midShift <= 0)
         {
@@ -134,36 +126,42 @@ public class SoundRecognizer {
 
             return null;
         }
-        return iterateForFrequencies(samples, midShift % 100); //rest is experimental
+        return iterateForFrequencies(frequenciesBinding, freqBindingBase, samples, midShift % 100); //rest is experimental
     }
 
-    public String iterateForFrequencies(int time)
+    public String iterateForFrequencies(int frequenciesBinding[], int freqBindingBase, int time)
     {
         if(samples == null)
         {
             Log(LOG_TAG, "Samples: " + samples.isEmpty());
             return null;
         }
-        return iterateForFrequencies(samples, time);
+        return iterateForFrequencies(frequenciesBinding, freqBindingBase, samples, time);
     }
 
     /**
      *
+     * @param frequenciesBinding Binding of frequencies. Indexes of array represent decimal code of ASCII symbols.
+     * Value is actual frequency which correspond to this symbol. If value is -1, then
+     * symbol is not used in program.
      * @param samples raw samples data
      * @param startT time in milliseconds from which message has to be detected
      * @return message contained in audiorecord
      * @throws IndexOutOfBoundsException has to be handled; may be thrown if
      * algorithm goes out of record time borders.
      */
-    public String iterateForFrequencies(List<Short> samples, final int startT) throws IndexOutOfBoundsException
+    public String iterateForFrequencies(int frequenciesBinding[], int freqBindingBase, List<Short> samples,
+                                        final int startT)
+            throws IndexOutOfBoundsException
     {
+        setFreqMapping(frequenciesBinding);
         List<Integer> roundedFreq = new ArrayList<>();
         int recordLimitTime = Integer.parseInt(audioData.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION));
         int time = startT; //experiment
         while(time < recordLimitTime - BEEP_DURATION)
         {
 //            roundedFreq.add(filterSum(samples, time));
-            roundedFreq.add(filterVote(samples, time)); //filterVote
+            roundedFreq.add(filterVote(frequenciesBinding, freqBindingBase, samples, time)); //filterVote
             time += BEEP_DURATION;
         }
         String wholeStream = "";
@@ -172,13 +170,14 @@ public class SoundRecognizer {
             char next = ERROR_CHAR;
             for(int i = 0; i < frequenciesBinding.length; i++)
             {
-                if(val != -1 && frequenciesBinding[i] == val) next = (char) i;
+                if(val != -1 && (frequenciesBinding[i] + freqBindingBase) == val) next = (char) i;
             }
             //System.out.println("'" + next + "' is: " + val);
             wholeStream += next;
         }
         Log(LOG_TAG, "Offset is " + startT + "ms. Text: " + wholeStream);
         String result = wholeStream;
+        //if(wrapMessageWithTags)
         result = result.substring(wholeStream.indexOf(START_TAG) + START_TAG.length(), wholeStream.lastIndexOf(END_TAG));
         return fromHex(result);
         /*try {
@@ -205,7 +204,7 @@ public class SoundRecognizer {
      * @param time moment of record on which frequency has to be counted
      * @return counted frequency
      */
-    public int filterVote(List<Short> samples, int time)
+    public int filterVote(int[] frequenciesBinding, int freqBindingBase, List<Short> samples, int time)
     {
         int step = 2 //in ms, how much to increase position on every iteration
                 , iter = 19 //number of iterations = number of assumed neighbor frequencies
@@ -232,7 +231,7 @@ public class SoundRecognizer {
         int rounded[] = new int[cells.length];
         for(double val : cells)
         {
-            rounded[c++] = closestBinding(val); //find closest frequency in binding to current frequency in set of neighbors
+            rounded[c++] = closestBinding(frequenciesBinding, freqBindingBase, val); //find closest frequency in binding to current frequency in set of neighbors
         }
         int counts[] = new int[rounded.length];
         for(int j = 0; j < counts.length; j++) //count number of times each frequency appeared
@@ -261,7 +260,7 @@ public class SoundRecognizer {
      *             in record to count frequency
      * @return counted frequency
      */
-    public int filterSum(List<Short> samples, int time)
+    public int filterSum(int frequenciesBinding[], int freqBindingBase, List<Short> samples, int time)
     {
         int step = 5 /*5*/, iter = 7 /*7*/, i = -step*(iter-1)/2;
         double sum = 0;
@@ -278,7 +277,7 @@ public class SoundRecognizer {
             //Log.w("Freq counting alg", "Out of bounds: " + (time + i) + "ms");
         }
         double dval = sum / iter;
-        return closestBinding(dval);
+        return closestBinding(frequenciesBinding, freqBindingBase, dval);
     }
 
     /**
@@ -286,12 +285,13 @@ public class SoundRecognizer {
      * @param dval frequency
      * @return closest to argument frequency value in binding
      */
-    public int closestBinding(double dval)
+    public int closestBinding(int frequenciesBinding[], int freqBindingBase, double dval)
     {
         double closestDist = Double.MAX_VALUE;
         int closestFreq = -1;
         for(int ival : frequenciesBinding)
         {
+            ival += freqBindingBase;
             double tempDist = Math.abs(dval - ival);
             if(tempDist < closestDist)
             {
@@ -310,7 +310,7 @@ public class SoundRecognizer {
      * in order for algorithm to work properly.
      * Sets midShift to offset in ms; position in middle of first beep
      */
-    public void locateMidShift() throws IndexOutOfBoundsException
+    public void locateMidShift(int frequenciesBinding[], int freqBindingBase) throws IndexOutOfBoundsException
     {
         if(samples == null || frequenciesBinding == null || audioData == null) {
             midShift = -1;
@@ -335,7 +335,7 @@ public class SoundRecognizer {
             }
 
             if(tempFreq == -1) continue;
-            if(checkFreqProximity(currMs, START_TAG, 0.5))
+            if(checkFreqProximity(frequenciesBinding, freqBindingBase, currMs, START_TAG, 0.5))
             {
                 if(tempDistance < BEEP_DURATION/2)
                 {
@@ -357,10 +357,10 @@ public class SoundRecognizer {
         Log(LOG_TAG, "rightBorder = " + rightBorder + ", tempDistance = " + tempDistance);
     }
 
-    public boolean checkFreqProximity(int offset, String characters, double precision) throws IndexOutOfBoundsException{
+    public boolean checkFreqProximity(int[] frequenciesBinding, int freqBindingBase, int offset, String characters, double precision) throws IndexOutOfBoundsException{
         int step = 0;
         for(char c : characters.toCharArray()) {
-            if(!checkFreqProximity(getFrequency(samples, offset + step), c, precision)) return false;
+            if(!checkFreqProximity(frequenciesBinding, freqBindingBase, getFrequency(samples, offset + step), c, precision)) return false;
             step += BEEP_DURATION;
         }
         Log(LOG_TAG, "Freq proximity succeeded. offset = " + offset);
@@ -375,10 +375,11 @@ public class SoundRecognizer {
      *                  considered as given character; scale of biggestDistBetweenFreq
      * @return
      */
-    public boolean checkFreqProximity(double freq, char character, double precision){
+    public boolean checkFreqProximity(int[] frequenciesBinding, int freqBindingBase, double freq, char character,
+                                      double precision){
         // why minus below? because we find first minimum char of tag on contrast with maximum one
-        return freq < frequenciesBinding[character] + precision * biggestDistBetweenFreq
-                && freq > frequenciesBinding[character] - precision * biggestDistBetweenFreq;
+        return freq < frequenciesBinding[character] + freqBindingBase + precision * biggestDistBetweenFreq
+                && freq > frequenciesBinding[character] + freqBindingBase - precision * biggestDistBetweenFreq;
     }
 
     /**
@@ -585,7 +586,7 @@ public class SoundRecognizer {
      * Record new audiofile to path set in recordPath variable.
      * Records untill ifRecord is set to false from another threads.
      */
-    public void record()
+    public void record(int[] frequenciesBinding, int freqBindingBase)
     {
         if(ifRecord) return;
         File f = new File(recordPath);
@@ -639,7 +640,7 @@ public class SoundRecognizer {
             e.printStackTrace();
         }
         try {
-            locateMidShift();
+            locateMidShift(frequenciesBinding, freqBindingBase);
         }
         catch (IndexOutOfBoundsException e) {
             e.printStackTrace();

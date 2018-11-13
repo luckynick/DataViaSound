@@ -12,5 +12,6 @@ import com.luckynick.shared.enums.SoundProductionUnit;
 public class ReceiveParameters {
 
     public SoundConsumptionUnit soundConsumptionUnit;
+    public int frequenciesBindingShift = 0;
 
 }

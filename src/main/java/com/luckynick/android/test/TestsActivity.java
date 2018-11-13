@@ -254,13 +254,12 @@ public class TestsActivity extends BaseActivity implements UDPMessageObserver, P
                         Log(LOG_TAG, "Sending message '"+sendParams.message+"' for test.");
                         writeStatus("Sending message '"+sendParams.message+"' for test.");
                         sessionStartTimestamp = System.currentTimeMillis();
-                        new AsyncPlayMessage(sendParams).execute(sendParams.message);
-                        /*try {
-                            new AsyncPlayMessage(sendParams).execute(sendParams.message).get();
-                        } catch (InterruptedException e) {
-                            e.printStackTrace();
-                        } catch (ExecutionException e) {
-                            e.printStackTrace();
+                        new AsyncPlayMessage(frequenciesArray_600_2000, sendParams).execute(sendParams.message);
+                        /*if(sendParams.spectralAnalysis) {
+                            new AsyncPlayMessage(frequenciesArray_500_15500, sendParams).execute(sendParams.message);
+                        }
+                        else {
+                            new AsyncPlayMessage(frequenciesArray_600_2000, sendParams).execute(sendParams.message);
                         }*/
                         c.send(new PacketBuilder(Packet.PacketType.Request).withID((short)PacketID.RESPONSE.ordinal())
                                 .withInt(PacketID.OK.ordinal())
@@ -281,13 +280,12 @@ public class TestsActivity extends BaseActivity implements UDPMessageObserver, P
                         writeStatus("Receiving message for test.");
 
                         sessionStartTimestamp = System.currentTimeMillis();
-                        new AsyncRecord().execute();
-                        /*try {
-                            new AsyncRecord().execute().get();
-                        } catch (InterruptedException e) {
-                            e.printStackTrace();
-                        } catch (ExecutionException e) {
-                            e.printStackTrace();
+                        new AsyncRecord(frequenciesArray_600_2000, receiveParameters.frequenciesBindingShift).execute();
+                        /*if(receiveParameters.spectralAnalysis) {
+                            new AsyncRecord(frequenciesArray_500_15500).execute();
+                        }
+                        else {
+                            new AsyncRecord(frequenciesArray_600_2000).execute();
                         }*/
                         c.send(new PacketBuilder(Packet.PacketType.Request).withID((short)PacketID.RESPONSE.ordinal())
                                 .withInt(PacketID.OK.ordinal())
@@ -306,8 +304,13 @@ public class TestsActivity extends BaseActivity implements UDPMessageObserver, P
                     Log(LOG_TAG, "Generating the text.");
                     writeStatus("Generating the text.");
                     sr.stopRecord();
-
-                    new AsyncIterateForFrequencies().execute();
+                    new AsyncIterateForFrequencies(frequenciesArray_600_2000, receiveParameters).execute();
+                    /*if(receiveParameters.spectralAnalysis) {
+                        new AsyncIterateForFrequencies(frequenciesArray_500_15500, false).execute();
+                    }
+                    else {
+                        new AsyncIterateForFrequencies(frequenciesArray_600_2000, true).execute();
+                    }*/
                     break;
                 default:
                     Log(LOG_TAG, "Unknown REQUEST: " + PacketID.ordinalToEnum(expectedAction));

@@ -46,7 +46,7 @@ public class MainActivity extends BaseActivity implements View.OnClickListener{
                 break;
             case R.id.recordLayoutStartButton:
                 ((TextView)findViewById(R.id.recordLayoutHelpText)).setText("Press \"Stop\" to finish recording");
-                new AsyncRecord().execute();
+                new AsyncRecord(frequenciesArray_600_2000, 0).execute();
                 break;
             case R.id.recordLayoutStopButton:
                 sr.stopRecord();
@@ -73,13 +73,13 @@ public class MainActivity extends BaseActivity implements View.OnClickListener{
                 setContentView(R.layout.play_message_layout);
                 break;
             case R.id.playMessageLayoutSendButton:
-                new AsyncPlayMessage().execute(((EditText) findViewById(R.id.messageEdit)).getText().toString());
+                new AsyncPlayMessage(frequenciesArray_600_2000).execute(((EditText) findViewById(R.id.messageEdit)).getText().toString());
                 break;
             case R.id.detectTextButton:
                 setContentView(R.layout.detect_text_layout);
                 break;
             case R.id.detectTextLayoutNextButton:
-                new AsyncIterateForFrequencies().execute();
+                new AsyncIterateForFrequencies(frequenciesArray_600_2000).execute();
                 break;
             case R.id.detectTextLayoutBackButton:
                 setContentView(R.layout.activity_main);
