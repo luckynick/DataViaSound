@@ -35,23 +35,26 @@ public abstract class BaseActivity extends AppCompatActivity implements GetFrequ
     SoundGenerator sg;
     SoundRecognizer sr;
     String rec;
-    int frequenciesArray_600_2000[];
-    //int frequenciesArray_500_15500[];
     Menu menu;
 
     SharedPreferences sharedPrefs;
 
     private static boolean isAsHotspot = false;
 
+    private static int frequenciesArray_600_2000[];
+    private static int frequenciesArray_1_500[];
+    //int frequenciesArray_500_15500[];
+
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        frequenciesArray_600_2000 = getResources().getIntArray(R.array.frequencies_600_2000);
+        frequenciesArray_1_500 = getResources().getIntArray(R.array.frequencies_1_500);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         rec = getExternalFilesDir(null).toString() + "/record.3gp"; //mp3
-        frequenciesArray_600_2000 = getResources().getIntArray(R.array.frequencies_600_2000);
         //frequenciesArray_500_15500 = getResources().getIntArray(R.array.frequencies_500_15500);
         sg = new SoundGenerator(rec);
-        sr = new SoundRecognizer(frequenciesArray_600_2000, 0, rec);
+        sr = new SoundRecognizer(0, 1, rec);
         Log(LOG_TAG, rec);
 
         sharedPrefs = getSharedPreferences("DataViaSound", 0);
@@ -94,14 +97,15 @@ public abstract class BaseActivity extends AppCompatActivity implements GetFrequ
                 {
                     message += (char)(Math.random() * 128);
                 }
-                new MainActivity.AsyncPlayMessage(frequenciesArray_600_2000).execute(message);
+                new MainActivity.AsyncPlayMessage().execute(message);
                 break;
             case R.id.recordQuickItem:
-                if(!sr.isIfRecord()) new MainActivity.AsyncRecord(frequenciesArray_600_2000, 0).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
+                if(!sr.isIfRecord()) new MainActivity.AsyncRecord()
+                        .executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
                 else sr.stopRecord();
                 break;
             case R.id.experimentItem:
-                sr.iterateForFrequencies(frequenciesArray_600_2000, 0, 50);
+                sr.iterateForFrequencies(0, 50);
                 break;
             case R.id.joinTestsItem:
                 Intent intent = new Intent(this, TestsActivity.class);
@@ -148,6 +152,20 @@ public abstract class BaseActivity extends AppCompatActivity implements GetFrequ
         return isAsHotspot;
     }
 
+    public static int[] getFreqBinding(double forValue) {
+        if(BaseActivity.frequenciesArray_600_2000 == null) return null;
+        if(forValue == 1) {
+            return BaseActivity.frequenciesArray_600_2000;
+        }
+        else if(forValue == 0.25) {
+            return BaseActivity.frequenciesArray_1_500; //схоже що діапазон недостатньо широкий
+        }
+        else {
+            //return BaseActivity.frequenciesArray_600_2000;
+            throw new IllegalArgumentException("No frequency binding available for value " + forValue);
+        }
+    }
+
 
     /**
      * AsyncTask for playMediaPlayer() in SoundGenerator object.
@@ -174,16 +192,19 @@ public abstract class BaseActivity extends AppCompatActivity implements GetFrequ
      */
     public class AsyncRecord extends AsyncTask<Void, Void, Void>
     {
-        int[] freqArr;
-        int freqBindingBase;
-        public AsyncRecord(int[] freqArr, int freqBindingBase) {
-            this.freqArr = freqArr;
-            this.freqBindingBase = freqBindingBase;
+        ReceiveParameters recvParams;
+
+        public AsyncRecord() {
+            this.recvParams = new ReceiveParameters();
+        }
+
+        public AsyncRecord(ReceiveParameters recvParams) {
+            this.recvParams = recvParams;
         }
 
         @Override
         protected Void doInBackground(Void... strings) {
-            sr.record(freqArr, freqBindingBase);
+            sr.record(recvParams.frequenciesBindingShift, recvParams.frequenciesBindingScale);
             return null;
         }
     }
@@ -223,25 +244,21 @@ public abstract class BaseActivity extends AppCompatActivity implements GetFrequ
     public class AsyncPlayMessage extends AsyncTask<String, Void, Void>
     {
         SendParameters params;
-        int[] freqArr;
 
-        AsyncPlayMessage(int[] freqArr) {
+        AsyncPlayMessage() {
             SendParameters params = new SendParameters();
-            params.loudnessLevel = 100;
-            params.soundProductionUnit = SoundProductionUnit.LOUD_SPEAKERS;
             this.params = params;
-            this.freqArr = freqArr;
         }
 
-        AsyncPlayMessage(int[] freqArr, SendParameters params) {
+        AsyncPlayMessage(SendParameters params) {
             this.params = params;
-            this.freqArr = freqArr;
         }
 
         @Override
         protected Void doInBackground(String... strings) {
             Log(LOG_TAG, "Device loudness (params.loudnessLevel): " + params.loudnessLevel);
-            sg.playMessage(freqArr, params.frequenciesBindingShift, strings[0], params.loudnessLevel);
+            sg.playMessage(params.frequenciesBindingShift, params.frequenciesBindingScale,
+                    strings[0], params.loudnessLevel);
             return null;
         }
     }
@@ -254,24 +271,22 @@ public abstract class BaseActivity extends AppCompatActivity implements GetFrequ
     {
         private Exception exception = null;
         ReceiveParameters params;
-        int[] freqArr;
 
-        public AsyncIterateForFrequencies(int[] freqArr) {
+        public AsyncIterateForFrequencies() {
             this.params = new ReceiveParameters();
             this.params.soundConsumptionUnit = SoundConsumptionUnit.MICROPHONE;
-            this.freqArr = freqArr;
         }
 
-        public AsyncIterateForFrequencies(int[] freqArr, ReceiveParameters params) {
+        public AsyncIterateForFrequencies(ReceiveParameters params) {
             this.params = params;
-            this.freqArr = freqArr;
         }
 
         @Override
         protected String doInBackground(Void... voids) {
             try
             {
-                return sr.iterateForFrequencies(freqArr, params.frequenciesBindingShift);
+                return sr.iterateForFrequencies(params.frequenciesBindingShift,
+                        params.frequenciesBindingScale);
             }
             catch (Exception e)
             {

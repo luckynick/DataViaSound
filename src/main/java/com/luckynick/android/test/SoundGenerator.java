@@ -45,8 +45,9 @@ public class SoundGenerator {
      * encodes text to frequencies and creates audio data, which is further played through speakers.
      * @param m text message which has to be encoded and played
      */
-    public void playMessage(int frequenciesArr[], int freqBindingBase, String m)
+    public void playMessage(int freqBindingBase, double freqBindingScale, String m)
     {
+        int frequenciesArr[] = BaseActivity.getFreqBinding(freqBindingScale);
         String message = JUNK_RIGHT + START_TAG; //junk here for test
         message += toHex(m);
         message += END_TAG + JUNK_RIGHT;
@@ -58,7 +59,8 @@ public class SoundGenerator {
         for (int i = 0; i < message.length(); i++) {
             int index = (int)message.charAt(i);
             double currentFreq;
-            if(index >= frequenciesArr.length) currentFreq = frequenciesArr[ERROR_CHAR] + freqBindingBase;
+            if(index >= frequenciesArr.length) currentFreq = frequenciesArr[ERROR_CHAR]
+                    + freqBindingBase;
             else currentFreq = frequenciesArr[message.charAt(i)] + freqBindingBase;
             if(currentFreq == -1.0) currentFreq = frequenciesArr[ERROR_CHAR] + freqBindingBase;
             Log(LOG_TAG, "Freq for symb '" + message.charAt(i) + "' num " + i + ": " + currentFreq);
@@ -86,8 +88,10 @@ public class SoundGenerator {
      * @param m
      * @param loudnessLevel from 0 to 100
      */
-    public void playMessage(int frequenciesArr[], int freqBindingBase, String m, final int loudnessLevel)
+    public void playMessage(int freqBindingBase, double freqBindingScale, String m,
+                            final int loudnessLevel)
     {
+        int frequenciesArr[] = BaseActivity.getFreqBinding(freqBindingScale);
         String message = JUNK_RIGHT + START_TAG; //junk here for test
         message += toHex(m);
         message += END_TAG + JUNK_RIGHT + JUNK_RIGHT;

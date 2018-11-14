@@ -11,7 +11,8 @@ import com.luckynick.shared.enums.SoundProductionUnit;
 @IOClassHandling(sendViaNetwork = true, dataStorage = SharedUtils.DataStorage.NONE)
 public class ReceiveParameters {
 
-    public SoundConsumptionUnit soundConsumptionUnit;
+    public SoundConsumptionUnit soundConsumptionUnit = SoundConsumptionUnit.MICROPHONE;
     public int frequenciesBindingShift = 0;
+    public double frequenciesBindingScale = 1;
 
 }
