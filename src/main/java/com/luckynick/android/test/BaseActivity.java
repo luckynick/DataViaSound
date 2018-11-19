@@ -41,14 +41,18 @@ public abstract class BaseActivity extends AppCompatActivity implements GetFrequ
 
     private static boolean isAsHotspot = false;
 
+    private static int frequenciesArray_1_2000[];
     private static int frequenciesArray_600_2000[];
+    private static int frequenciesArray_1_1000[];
     private static int frequenciesArray_1_500[];
     //int frequenciesArray_500_15500[];
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        frequenciesArray_1_2000 = getResources().getIntArray(R.array.frequencies_1_2000);
         frequenciesArray_600_2000 = getResources().getIntArray(R.array.frequencies_600_2000);
+        frequenciesArray_1_1000 = getResources().getIntArray(R.array.frequencies_1_1000);
         frequenciesArray_1_500 = getResources().getIntArray(R.array.frequencies_1_500);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         rec = getExternalFilesDir(null).toString() + "/record.3gp"; //mp3
@@ -154,11 +158,17 @@ public abstract class BaseActivity extends AppCompatActivity implements GetFrequ
 
     public static int[] getFreqBinding(double forValue) {
         if(BaseActivity.frequenciesArray_600_2000 == null) return null;
+        if(forValue == 1.33) {
+            return BaseActivity.frequenciesArray_1_2000;
+        }
         if(forValue == 1) {
             return BaseActivity.frequenciesArray_600_2000;
         }
+        else if(forValue == 0.5) {
+            return BaseActivity.frequenciesArray_1_1000;
+        }
         else if(forValue == 0.25) {
-            return BaseActivity.frequenciesArray_1_500; //схоже що діапазон недостатньо широкий
+            return BaseActivity.frequenciesArray_1_500; //looks like the spectre is not wide enough
         }
         else {
             //return BaseActivity.frequenciesArray_600_2000;

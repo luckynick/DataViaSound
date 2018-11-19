@@ -12,7 +12,7 @@ import com.luckynick.shared.enums.SoundProductionUnit;
 public class ReceiveParameters {
 
     public SoundConsumptionUnit soundConsumptionUnit = SoundConsumptionUnit.MICROPHONE;
-    public int frequenciesBindingShift = 0;
-    public double frequenciesBindingScale = 1;
+    public int frequenciesBindingShift = SharedUtils.DEFAULT_FREQ_BINDING_BASE;
+    public double frequenciesBindingScale = SharedUtils.DEFAULT_FREQ_BINDING_SCALE;
 
 }

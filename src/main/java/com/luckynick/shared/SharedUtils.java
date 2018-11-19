@@ -27,6 +27,9 @@ public class SharedUtils {
 
     public static final long MAX_AUDIO_RECORD_SIZE = 2000000;//2mb //10000000 //10mb
 
+    public static final int DEFAULT_FREQ_BINDING_BASE = 1500;//0
+    public static final double DEFAULT_FREQ_BINDING_SCALE = 1.33;//1
+
 
     public enum DataStorage {
         ROOT(formPathString("data")),
