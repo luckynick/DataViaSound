@@ -145,39 +145,4 @@ public class SharedUtils {
     public static final int SPECTRAL_ANALYSIS_STRING_LEN = 10;
     public static final int[] SPECTRAL_ANALYSIS_CHARS = new int[]{48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 65, 66, 67, 68, 69, 70};
     */
-
-
-    /**
-     * Make string with hex 8-bit numbers from text.
-     * @param message text for which hex string has to be counted
-     * @return string which contains hex representation of every single character in message
-     */
-    public static String toHex(String message)
-    {
-        if(message == null) return null;
-        String s = "";
-        for(int i = 0; i < message.length(); i++)
-        {
-            s += String.format("%02X", (byte)message.charAt(i));
-        }
-        return s;
-    }
-
-    /**
-     * Decode string with hex 8-bit numbers to text.
-     * @param hex string which contains hex representation of characters
-     * @return text decoded from hex string
-     */
-    public static String fromHex(String hex) throws StringIndexOutOfBoundsException, NumberFormatException
-    {
-        String res = "";
-        for(int i = 0; i < hex.length(); i += 2)
-        {
-            String one = "0x" + hex.charAt(i) + "" + hex.charAt(i + 1);
-            System.out.println("One is " + one);
-            res += (char) (int) Integer.decode(one);
-        }
-        System.out.println(res);
-        return res;
-    }
 }

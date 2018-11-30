@@ -208,7 +208,7 @@ public class SoundRecognizer {
      * @param time moment of record on which frequency has to be counted
      * @return counted frequency
      */
-    public int filterVote(int freqBindingBase, double freqBindingScale, List<Short> samples, int time)
+    private int filterVote(int freqBindingBase, double freqBindingScale, List<Short> samples, int time)
     {
         int step = 2 //in ms, how much to increase position on every iteration
                 , iter = 19 //number of iterations = number of assumed neighbor frequencies
@@ -264,7 +264,7 @@ public class SoundRecognizer {
      *             in record to count frequency
      * @return counted frequency
      */
-    public int filterSum(int freqBindingBase, double freqBindingScale, List<Short> samples, int time)
+    private int filterSum(int freqBindingBase, double freqBindingScale, List<Short> samples, int time)
     {
         int step = 5 /*5*/, iter = 7 /*7*/, i = -step*(iter-1)/2;
         double sum = 0;
