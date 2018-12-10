@@ -89,12 +89,13 @@ public class SoundGenerator {
      * @param loudnessLevel from 0 to 100
      */
     public void playMessage(int freqBindingBase, double freqBindingScale, String m,
-                            final int loudnessLevel)
+                            final int loudnessLevel, boolean wrapInTags)
     {
         int frequenciesArr[] = BaseActivity.getFreqBinding(freqBindingScale);
         String message = JUNK_RIGHT + START_TAG; //junk here for test
         message += toHex(m);
         message += END_TAG + JUNK_RIGHT + JUNK_RIGHT;
+        if(!wrapInTags) message = toHex(m);
         /*String message;
         if(wrapInTags) {
             message = JUNK_RIGHT + START_TAG; //junk here for test

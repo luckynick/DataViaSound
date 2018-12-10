@@ -617,10 +617,10 @@ public class SoundRecognizer {
         mr.setAudioChannels(1);
         try {
             mr.prepare();
-            mr.start();
         } catch (IOException e) {
             e.printStackTrace();
         }
+        mr.start();
         while(ifRecord)
         {
             try {
@@ -655,6 +655,112 @@ public class SoundRecognizer {
             f.delete();
         }
 
+    }
+
+    /**
+     * Count frequency on specified moment of record.
+     * Based on principle that every graph of explicit frequency has
+     * it's zero points. Algorithm finds distance between first
+     * zero point on the left and second zero point on the right.
+     * Then this distance is a period of sine wave.
+     * Frequency = SAMPLE_RATE / wave period.
+     * @param samples raw samples data
+     * @param milliseconds time position in record (milliseconds)
+     * @return counted frequency
+     * @throws IndexOutOfBoundsException
+     * @throws IllegalStateException
+     */
+    public int getLoudness(List<Short> samples, int milliseconds) throws IndexOutOfBoundsException, IllegalStateException
+    {
+        final int startSamplePosition = (int)(SAMPLE_RATE * ((double)milliseconds/1000));
+        int posNow = startSamplePosition - 1;
+        int posBefore = startSamplePosition;
+        int leftZero, rightZero;
+        while(!(samples.get(posNow) >= 0 && samples.get(posBefore) < 0) && !(samples.get(posNow) <= 0 && samples.get(posBefore) > 0))
+        {
+            posNow--;
+            posBefore--;
+        }
+        leftZero = posNow; //go left one time to find left zero
+        posNow = startSamplePosition + 1;
+        posBefore = startSamplePosition;
+        for(int i = 0; i < 2; i++)
+        {
+            while(!(samples.get(posNow) >= 0 && samples.get(posBefore) < 0) && !(samples.get(posNow) <= 0 && samples.get(posBefore) > 0))
+            {
+                posNow++;
+                posBefore++;
+            }
+            posNow++;
+            posBefore++;
+        }
+        rightZero = posNow; //go right two times to find right zero
+        leftZero++; rightZero--; rightZero--; //above counts are wrong a little
+        double wavePeriod = (rightZero - leftZero);
+        /*Above counts find only integer part of wave period.
+         * But decimal part is extremely important. Left and
+         * right additions are counted below.*/
+        int leftZeroVal = samples.get(leftZero);
+        int leftZeroMinusVal = samples.get(leftZero - 1);
+        int rightZeroVal = samples.get(rightZero);
+        int rightZeroPlusVal = samples.get(rightZero + 1);
+        double leftAddition = calcAddition(leftZeroMinusVal, leftZeroVal, 1, Sides.LEFT);
+        double rightAddition = calcAddition(rightZeroVal, rightZeroPlusVal, 1, Sides.RIGHT);
+
+        double leftZeroWAddition = leftZero - leftAddition;
+        double rightZeroWAddition = rightZero - rightAddition;
+
+        Log(LOG_TAG, "Boundaries ("+milliseconds+"): " + leftZeroWAddition + " " + rightZeroWAddition);
+
+        //double positionToGet = (leftZeroWAddition + rightZeroWAddition) / 2;
+        double positionToGet = leftZeroWAddition + (rightZeroWAddition - leftZeroWAddition) / 4;
+
+
+
+        return getLoudnessAvg(samples, (int)positionToGet);
+    }
+
+    private boolean signChanged(int one, int another) {
+        //if(one == 0 || another == 0) return true;
+        int absSum = Math.abs(one) + Math.abs(another);
+        if(absSum != Math.abs(one + another)) return true;
+        else return false;
+    }
+
+    private int getLoudnessAvg(List<Short> samples, int samplePosition) {
+        int zeroPosition = samplePosition;
+        int current = samples.get(zeroPosition), previous;
+        do {
+            previous = current;
+            current = samples.get(--zeroPosition);
+        }
+        while (!signChanged(current, previous));
+
+        int walkPointer = zeroPosition + 1;
+        int max = -1;
+        do {
+            previous = samples.get(++walkPointer);
+            current = samples.get(++walkPointer);
+            int currentAbs = Math.abs(current);
+            if(currentAbs > max) max = currentAbs;
+        }
+        while (!signChanged(current, previous));
+
+
+        /*for(int i = samplePosition - 2; i < samplePosition + 2; i++) {
+            try{
+                int sampleVal = samples.get(i);
+                Log(LOG_TAG, "[avg] For sample pos " + i + ": " + sampleVal);
+                sum += Math.abs(sampleVal);
+            }
+            catch (IndexOutOfBoundsException e) {
+                samplePosition++;
+            }
+        }
+
+        Log(LOG_TAG, "[avg] Result " + sum / 5);
+        return sum / 5;*/
+        return max;
     }
 
     public boolean isIfRecord() {

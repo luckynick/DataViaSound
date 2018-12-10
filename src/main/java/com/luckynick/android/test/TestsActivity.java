@@ -254,7 +254,7 @@ public class TestsActivity extends BaseActivity implements UDPMessageObserver, P
                         Log(LOG_TAG, "Sending message '"+sendParams.message+"' for test.");
                         writeStatus("Sending message '"+sendParams.message+"' for test.");
                         sessionStartTimestamp = System.currentTimeMillis();
-                        new AsyncPlayMessage(sendParams).execute(sendParams.message);
+                        new AsyncPlayMessage(sendParams, true).execute(sendParams.message);
                         /*if(sendParams.spectralAnalysis) {
                             new AsyncPlayMessage(frequenciesArray_500_15500, sendParams).execute(sendParams.message);
                         }

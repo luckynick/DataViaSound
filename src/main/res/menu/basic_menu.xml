@@ -33,4 +33,8 @@
     <item android:title="experiment"
         android:id="@+id/experimentItem"
         android:onClick="onClickMenu" />
+
+    <item android:title="reset calibration"
+        android:id="@+id/resetCalibration"
+        android:onClick="onClickMenu" />
 </menu>

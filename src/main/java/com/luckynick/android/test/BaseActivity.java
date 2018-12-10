@@ -37,6 +37,8 @@ public abstract class BaseActivity extends AppCompatActivity implements GetFrequ
     String rec;
     Menu menu;
 
+    private int loudnessLevel = 50;
+
     SharedPreferences sharedPrefs;
 
     private static boolean isAsHotspot = false;
@@ -112,14 +114,24 @@ public abstract class BaseActivity extends AppCompatActivity implements GetFrequ
                 sr.iterateForFrequencies(0, 50);
                 break;
             case R.id.joinTestsItem:
+            {
                 Intent intent = new Intent(this, TestsActivity.class);
                 //intent.putExtra("asHotspot", this.isAsHotspot);
                 //intent.putExtra("asHotspot", new PAr);
                 startActivity(intent);
+            }
                 break;
             case R.id.asHotspotCkeckbox:
                 item.setChecked(!item.isChecked());
                 setAsHotspot(item.isChecked());
+                break;
+            case R.id.resetCalibration:
+            {
+
+                sharedPrefs.edit().putInt("calibratedLoudness", -1).commit();
+                Intent intent = new Intent(this, CalibrationActivity.class);
+                startActivity(intent);
+            }
                 break;
         }
 
@@ -230,7 +242,8 @@ public abstract class BaseActivity extends AppCompatActivity implements GetFrequ
             String message = null;
             try {
                 List<Short> samples = sr.getSamples();
-                message = String.valueOf(sr.getFrequency(samples, ints[0]));
+                message = String.valueOf(sr.getFrequency(samples, ints[0])) + "\nLoudness:"
+                        + String.valueOf(sr.getLoudness(samples, ints[0]));
             }
             catch (IndexOutOfBoundsException | IllegalStateException e)
             {
@@ -254,21 +267,24 @@ public abstract class BaseActivity extends AppCompatActivity implements GetFrequ
     public class AsyncPlayMessage extends AsyncTask<String, Void, Void>
     {
         SendParameters params;
+        boolean wrapInTags = true;
 
         AsyncPlayMessage() {
             SendParameters params = new SendParameters();
             this.params = params;
         }
 
-        AsyncPlayMessage(SendParameters params) {
+        AsyncPlayMessage(SendParameters params, boolean wrapInTags) {
             this.params = params;
+            this.wrapInTags = wrapInTags;
         }
 
         @Override
         protected Void doInBackground(String... strings) {
             Log(LOG_TAG, "Device loudness (params.loudnessLevel): " + params.loudnessLevel);
             sg.playMessage(params.frequenciesBindingShift, params.frequenciesBindingScale,
-                    strings[0], params.loudnessLevel);
+                    strings.length < 1 ? params.message : strings[0], params.loudnessLevel, wrapInTags);
+            //params.message strings[0]
             return null;
         }
     }
@@ -311,6 +327,14 @@ public abstract class BaseActivity extends AppCompatActivity implements GetFrequ
             Log(LOG_TAG, s);
             iterateForFrequenciesFinished(s, exception);
         }
+    }
+
+    public int getLoudnessLevel() {
+        return loudnessLevel;
+    }
+
+    public void setLoudnessLevel(int loudnessLevel) {
+        this.loudnessLevel = loudnessLevel;
     }
 }
 
